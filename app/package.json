@@ -1,0 +1,21 @@
+{
+  "name": "mose-subtitles",
+  "description": "Angular Electron sample",
+  "version": "1.0.0",
+  "main": "main.js",
+  "private": true,
+  "dependencies": {
+    "@deepgram/sdk": "^1.14.0",
+    "@types/command-exists": "^1.2.0",
+    "@types/fluent-ffmpeg": "^2.1.20",
+    "cli-color": "^2.0.3",
+    "command-exists": "^1.2.9",
+    "commander": "^9.4.1",
+    "ffmpeg-static": "^5.1.0",
+    "ffprobe-static": "^3.1.0",
+    "firebase": "^9.17.1",
+    "fluent-ffmpeg": "^2.1.2",
+    "inquirer": "^9.1.4",
+    "platform-folders": "^0.6.0"
+  }
+}

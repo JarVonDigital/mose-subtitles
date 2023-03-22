@@ -1,0 +1,139 @@
+
+<div class="selector">
+  <li *ngFor="let parsedFileName of files" (click)="loadContent(parsedFileName)">{{parsedFileName.original}}</li>
+</div>
+
+<div class="content">
+
+  <div class="content-header">
+    <div class="menuBtn">
+      <img src="https://img.icons8.com/material-rounded/96/null/sidebar-menu.png"/>
+    </div>
+
+    <div class="title">
+      <h2 *ngIf="selectedFile">{{selectedFile.clean}} | <small *ngIf="isTranslating">{{updatingNumber}} / {{workingFile.subtitles.length}}</small></h2>
+    </div>
+
+    <div class="buttons">
+      <div class="btn" (click)="regenerateSubtitle('JSON')">
+        <img src="https://img.icons8.com/material-rounded/96/null/new-by-copy.png"/>
+      </div>
+
+      <div class="btn" (click)="onSaveSubtitle()">
+        <img src="https://img.icons8.com/material-rounded/96/null/save-all.png"/>
+      </div>
+
+      <div class="btn">
+        <img src="https://img.icons8.com/material-rounded/96/null/delete-forever.png"/>
+      </div>
+    </div>
+  </div>
+
+  <div class="video-container">
+    <video id="videoPlayer" class="main-video-player" [src]="videoURL"></video>
+    <div class="subtitle-block" *ngIf="subtitleLanguage === 'en' && showSubtitle">{{currentSubtitle?.utterance}}</div>
+    <div class="subtitle-block" *ngIf="subtitleLanguage !== 'en' && showSubtitle">{{currentSubtitle?.languages[subtitleLanguage]}}</div>
+  </div>
+
+  <div class="controls">
+
+    <div class="buttons">
+      <button *ngIf="!isPlaying" (click)="play()">
+        <img src="https://img.icons8.com/material/96/null/play--v1.png"/>
+      </button>
+      <button *ngIf="isPlaying" [ngClass]="{'playing': isPlaying}" (click)="pause()">
+        <img src="https://img.icons8.com/material/96/678f67/pause--v1.png"/>
+      </button>
+    </div>
+
+    <div class="slider">
+
+      <div class="slider-header" *ngIf="selectedFile">
+        <h3>{{selectedFile.clean}}</h3>
+        <h4>{{formattedCurrentTime  || '00:00:00'}}</h4>
+      </div>
+
+      <input type="range" [value]="currentTime" min="0" [max]="sound?.duration(0)" (input)="onChangeRange($event)">
+    </div>
+
+    <!-- Control: BUTTONS -->
+    <div class="buttons">
+      <button [ngClass]="{'muted': isMuted}" (click)="muteAudio()">
+        <img src="https://img.icons8.com/material/96/null/no-audio--v1.png"/>
+      </button>
+      <button [ngClass]="{'active': subtitleLanguage !== 'en'}" (click)="swapSubtitleLanguage()">
+        <img src="https://img.icons8.com/material/96/null/google-translate.png"/>
+      </button>
+      <button (click)="regenerateSubtitle('SRT')">
+        <img src="https://img.icons8.com/material/96/null/download--v1.png"/>
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="editor">
+  <div class="json-editor" *ngIf="workingFile">
+    <div class="btn-header">
+      <button class="btn" (click)="translateAllText()">Translate All: [Spanish]</button>
+      <button class="btn" (click)="onToggleTranslation()">Hide Translation: [{{isTranslationHidden}}]</button>
+    </div>
+
+    <ng-container *ngFor="let subtitle of workingFile.subtitles; index as id">
+      <div [id]="'sub-' + id" class="subtitle" [ngClass]="subtitle.isActive ? 'active' : 'not-active'"> <!-- [ngClass]="thisSubtitleActive(subtitle, id)" -->
+        <div class="header">
+
+          <!--
+          Play/Pause Button for Subtitle Bite
+          -->
+          <button *ngIf="!subtitle.isActive || !isPlaying" (click)="playFrom(subtitle.sTime)">
+            <img src="https://img.icons8.com/material/96/null/play--v1.png"/>
+          </button>
+          <button *ngIf="subtitle.isActive && isPlaying" (click)="pause()">
+            <img src="https://img.icons8.com/material/96/678f67/pause--v1.png"/>
+          </button>
+
+          <!-- SYNC Position -->
+          <h3><small>SYNC</small>: {{subtitle.sTime | number}}</h3>
+
+          <!--
+          Translate Button
+            - Will translate into all available languages
+           -->
+          <button (click)="translateText(subtitle)">
+            <img src="https://img.icons8.com/material/96/null/google-translate.png"/>
+          </button>
+        </div>
+
+        <!-- English | Default -->
+        <div class="utterance">
+          <div class="info">
+            <label>English | Default</label>
+          </div>
+          <div class="container">
+            <textarea [(ngModel)]="subtitle.utterance">{{subtitle.utterance}}</textarea>
+          </div>
+        </div>
+
+        <!-- Spanish -->
+        <div class="utterance" *ngIf="subtitle.languages.es && !isTranslationHidden">
+          <label>Spanish</label>
+          <div class="container">
+            <textarea [(ngModel)]="subtitle.languages.es">{{subtitle.languages.es}}</textarea>
+            <img src="https://img.icons8.com/material-rounded/48/fff/update-left-rotation.png"/>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="buttons">
+          <button *ngIf="id === 0 || id === (workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, false, subtitle)">Delete</button>
+          <button *ngIf="id > 0 && (id < workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, true, subtitle)">Shift Up</button>
+          <button *ngIf="id > 0 && (id < workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, false, subtitle)">Shift Down</button>
+          <button (click)="onSplitSubtitle(id)">Split Subtitle</button>
+        </div>
+
+      </div>
+    </ng-container>
+  </div>
+</div>
