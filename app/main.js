@@ -107,7 +107,8 @@ function doRunFileChecker() {
         if (!audioFilesWithoutExtension.includes(videoFileWithNoExtension)) {
             console.log(file);
             // At this point we need to run our local parser to create the audio file
-            let commandToRun = `cd ${path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'SYSTEM', 'core', 'MOSE-TOOLS')} && node index.js '${file[0]}'`;
+            let commandToRun = `cd ${path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'SYSTEM', 'core', 'MOSE-TOOLS')} && node index.js [${file[0]}]`;
+            console.log(commandToRun);
             (0, child_process_1.execSync)(commandToRun); // Execute Command
             // Create JSON File
             (0, mose_1.generateSubtitles)(file[0], "JSON")

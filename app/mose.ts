@@ -119,12 +119,10 @@ export function getSingleFile(mediaType, filename) {
     // Media Types :: Passes as properties
     if(mediaType.toUpperCase() === 'AUDIO') {
       let data = readFileSync(path.join(audioFolder, filename), {encoding: "utf8"});
-      console.log(data);
       return data;
     }
     if(mediaType.toUpperCase() === 'SUBTITLE') {
       let data = readFileSync(path.join(subtitlesFolder, filename), {encoding: "utf8"});
-      console.log(data);
       return data;
     }
 

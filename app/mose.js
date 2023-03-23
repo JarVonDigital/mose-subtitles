@@ -126,15 +126,14 @@ function genSrtFromTranscribe(response, options = { title: '', location: '' }) {
 exports.genSrtFromTranscribe = genSrtFromTranscribe;
 function getSingleFile(mediaType, filename) {
     try {
+        console.log(filename);
         // Media Types :: Passes as properties
         if (mediaType.toUpperCase() === 'AUDIO') {
             let data = (0, fs_1.readFileSync)(path.join(audioFolder, filename), { encoding: "utf8" });
-            console.log(data);
             return data;
         }
         if (mediaType.toUpperCase() === 'SUBTITLE') {
             let data = (0, fs_1.readFileSync)(path.join(subtitlesFolder, filename), { encoding: "utf8" });
-            console.log(data);
             return data;
         }
     }

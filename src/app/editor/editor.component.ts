@@ -18,6 +18,8 @@ interface FileContainer {
 })
 export class EditorComponent implements OnInit, OnChanges {
 
+  path = window.require('path');
+
   public files: FileContainer[];
   public selectedFile: FileContainer;
   public workingFile: Subtitle;
@@ -35,7 +37,7 @@ export class EditorComponent implements OnInit, OnChanges {
   public isMuted = false;
   public formattedCurrentTime: string;
   public subtitleLanguage: 'en' | 'es' = 'en';
-  public documentURL: SafeUrl;
+  public documentURL: string;
   public videoURL: SafeUrl;
   public showVideo = false;
   public showSubtitle = false;
@@ -54,7 +56,7 @@ export class EditorComponent implements OnInit, OnChanges {
     this.app.getDocumentsDirectory()
       .then(data => {
         console.log(data);
-        this.documentURL = this.sanitizer.sanitize(4, data);
+        this.documentURL = data;
       })
       .then(() => this.loadFolderContent())
       .catch(err => console.log(err));
@@ -90,12 +92,14 @@ export class EditorComponent implements OnInit, OnChanges {
     this.showVideo = true;
     this.showSubtitle = false;
 
+    const audioURL = this.path.join(this.documentURL, '@JWVT', this.workingFile.location.split('@JWVT')[1]);
+    console.log(audioURL);
     // Setup Sound Source
     this.sound = new Howl({
-      src: [`mose://${this.documentURL}/@JWVT/${this.workingFile.location.split('@JWVT')[1]}`]
+      src: [`mose://${audioURL}`]
     });
 
-    // Setup Video File
+    // // Setup Video File
     this.videoURL = this.sanitizer.bypassSecurityTrustUrl(
       `mose://${this.documentURL}/@JWVT/videos/${this.selectedFile.original}`
     );
@@ -235,7 +239,7 @@ export class EditorComponent implements OnInit, OnChanges {
     }
 
     if (isConfirmed) {
-      this.http.post(`http://127.0.0.1:5000/translate`,
+      this.http.post(`http://103-89-12-225.cloud-xip.com:5000/translate`,
         {
           q: subtitle.utterance,
           source: 'en',
@@ -259,7 +263,7 @@ export class EditorComponent implements OnInit, OnChanges {
     this.updatingNumber = 1;
     this.isTranslating = true;
     for (const subtitle of this.workingFile.subtitles) {
-      const translation = await this.http.post<any>(`http://127.0.0.1:5000/translate`,
+      const translation = await this.http.post<any>(`http://103-89-12-225.cloud-xip.com:5000/translate`,
         {
           q: subtitle.utterance,
           source: 'en',
