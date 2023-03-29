@@ -39,6 +39,8 @@ const mose_1 = require("./mose");
 const child_process_1 = require("child_process");
 const url = __importStar(require("url"));
 const platform_folders_1 = require("platform-folders");
+const fs_1 = require("fs");
+const constants_1 = require("constants");
 let translateServer;
 let win = null;
 const args = process.argv.slice(1), serve = args.some(val => val === '--serve');
@@ -96,23 +98,26 @@ function removeSystemFilesFromArray(videoFiles) {
     return newlyDefinedArray;
 }
 function doRunFileChecker() {
-    // Get Video Files On System
-    let videoFiles = removeSystemFilesFromArray(fs.readdirSync(path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'videos')));
-    // Get Audio Files on system
-    let audioFiles = removeSystemFilesFromArray(fs.readdirSync(path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'audio')));
-    let audioFilesWithoutExtension = [];
-    audioFiles.forEach(audio => audioFilesWithoutExtension.push(audio[1]));
-    videoFiles.forEach(file => {
-        let videoFileWithNoExtension = file[1];
-        if (!audioFilesWithoutExtension.includes(videoFileWithNoExtension)) {
-            console.log(file);
-            // At this point we need to run our local parser to create the audio file
-            let commandToRun = `cd ${path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'SYSTEM', 'core', 'MOSE-TOOLS')} && node index.js [${file[0]}]`;
-            console.log(commandToRun);
-            (0, child_process_1.execSync)(commandToRun); // Execute Command
-            // Create JSON File
-            (0, mose_1.generateSubtitles)(file[0], "JSON")
-                .catch(err => console.log(err));
+    return __awaiter(this, void 0, void 0, function* () {
+        // Get Video Files On System
+        let videoFiles = removeSystemFilesFromArray(fs.readdirSync(path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'videos')));
+        // Get Audio Files on system
+        let audioFiles = removeSystemFilesFromArray(fs.readdirSync(path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'audio')));
+        let audioFilesWithoutExtension = [];
+        for (let audio of audioFiles) {
+            audioFilesWithoutExtension.push(audio[1]);
+        }
+        for (let file of videoFiles) {
+            let videoFileWithNoExtension = file[1];
+            if (!audioFilesWithoutExtension.includes(videoFileWithNoExtension)) {
+                console.log(file);
+                // At this point we need to run our local parser to create the audio file
+                let commandToRun = `cd ${path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'SYSTEM', 'core', 'MOSE-TOOLS')} && node index.js [${file[0]}]`;
+                console.log(commandToRun);
+                (0, child_process_1.execSync)(commandToRun); // Execute Command
+                // Create JSON File
+                yield (0, mose_1.generateSubtitles)(file[0], "JSON");
+            }
         }
     });
 }
@@ -144,10 +149,7 @@ try {
             createWindow();
         }
     });
-    electron_1.app.on("will-quit", () => {
-        // Kill Translate Server
-        translateServer.kill('SIGTERM');
-    });
+    electron_1.app.on("will-quit", () => { });
     // Handlers
     electron_1.ipcMain.handle("getSingleFile", (ev, arg) => __awaiter(void 0, void 0, void 0, function* () { return yield (0, mose_1.getSingleFile)(arg[0], arg[1]); }));
     electron_1.ipcMain.handle("getFolderContent", (ev, arg) => __awaiter(void 0, void 0, void 0, function* () { return (0, mose_1.getFolderContent)(arg); }));
@@ -159,23 +161,26 @@ try {
         let data = yield new Promise((res, rej) => {
             // Check Folder Exist
             let verifySystem = fs.existsSync(path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'SYSTEM', '.mose'));
-            // Start File watcher
-            let toProceedWithAction;
-            if (systemFileWatcher !== undefined)
-                systemFileWatcher.close();
-            systemFileWatcher = fs.watch(path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'videos'), (event, file) => {
-                if (toProceedWithAction)
-                    clearTimeout(toProceedWithAction);
-                // Prevent Window from being closed while operations are happening
-                win.closable = false;
-                // Proceed with any actions relating to file
-                toProceedWithAction = setTimeout(() => {
-                    // This is where we will handle new data
-                    doRunFileChecker();
-                    // Allow Window to be closed after operation
-                    win.closable = true;
-                }, 5000);
-            });
+            // // Start File watcher
+            // let toProceedWithAction: Timeout;
+            // if(systemFileWatcher !== undefined) systemFileWatcher.close();
+            // systemFileWatcher = fs.watch(path.join(getDocumentsFolder(), '@JWVT', 'videos'), (event, file) => {
+            //   if(toProceedWithAction) clearTimeout(toProceedWithAction);
+            //
+            //   // Prevent Window from being closed while operations are happening
+            //   win.closable = false;
+            //
+            //   // Proceed with any actions relating to file
+            //   toProceedWithAction = setTimeout(() => {
+            //     // This is where we will handle new data
+            //     doRunFileChecker()
+            //
+            //     // Allow Window to be closed after operation
+            //     win.closable = true;
+            //   }, 5000);
+            //
+            //
+            // })
             if (verifySystem) {
                 res(true);
             }
@@ -184,6 +189,29 @@ try {
             }
         });
         return data;
+    }));
+    // Handle Media Upload
+    electron_1.ipcMain.handle("selectMediaToUpload", (ev, arg) => __awaiter(void 0, void 0, void 0, function* () {
+        let fileLocation = electron_1.dialog.showOpenDialogSync({
+            title: "MOSE | Upload Media",
+            buttonLabel: "Upload Media",
+            properties: ["openFile", "noResolveAliases", "treatPackageAsDirectory"],
+            filters: [
+                {
+                    name: "Videos",
+                    extensions: [".mp4"]
+                }
+            ]
+        });
+        // File Selected
+        if (fileLocation) {
+            let fileName = path.parse(fileLocation[0]).name + path.parse(fileLocation[0]).ext;
+            (0, fs_1.copyFileSync)(fileLocation[0], path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'videos', fileName), constants_1.COPYFILE_FICLONE);
+            win.closable = false;
+            yield doRunFileChecker();
+            win.closable = true;
+        }
+        return fileLocation;
     }));
 }
 catch (e) {

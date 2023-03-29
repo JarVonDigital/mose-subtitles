@@ -1,30 +1,47 @@
 
 <div class="selector">
-  <li *ngFor="let parsedFileName of files" (click)="loadContent(parsedFileName)">{{parsedFileName.original}}</li>
+  <div class="data">
+    <li *ngFor="let parsedFileName of files" (click)="loadContent(parsedFileName)">
+      <div class="icon">
+        <img src="https://img.icons8.com/material-outlined/48/aaaaaa/laptop-play-video.png"/>
+      </div>
+      <div class="info">{{parsedFileName.clean}}</div>
+    </li>
+  </div>
+  <div class="uploader">
+    <div class="message">
+      Media Upload
+      <small *ngIf="isUploading">Uploading File...</small>
+      <small *ngIf="uploadedFile">Uploaded {{uploadedFile}}</small>
+    </div>
+    <div class="icon">
+      <img (click)="onSelectMediaToUpload()" src="https://img.icons8.com/material/96/ab684c/upload--v1.png"/>
+    </div>
+  </div>
 </div>
 
 <div class="content">
 
   <div class="content-header">
     <div class="menuBtn">
-      <img src="https://img.icons8.com/material-rounded/96/null/sidebar-menu.png"/>
+      <img src="https://img.icons8.com/material-outlined/48/ffffff/laptop-play-video.png"/>
     </div>
 
     <div class="title">
-      <h2 *ngIf="selectedFile">{{selectedFile.clean}} | <small *ngIf="isTranslating">{{updatingNumber}} / {{workingFile.subtitles.length}}</small></h2>
+      <h2 *ngIf="selectedFile">{{selectedFile.clean}} <small *ngIf="isTranslating">| {{updatingNumber}} / {{workingFile.subtitles.length}}</small></h2>
     </div>
 
     <div class="buttons">
       <div class="btn" (click)="regenerateSubtitle('JSON')">
-        <img src="https://img.icons8.com/material-rounded/96/null/new-by-copy.png"/>
+        <img src="https://img.icons8.com/material-rounded/96/ffffff/new-by-copy.png"/>
       </div>
 
       <div class="btn" (click)="onSaveSubtitle()">
-        <img src="https://img.icons8.com/material-rounded/96/null/save-all.png"/>
+        <img src="https://img.icons8.com/material-rounded/96/ffffff/save-all.png"/>
       </div>
 
       <div class="btn">
-        <img src="https://img.icons8.com/material-rounded/96/null/delete-forever.png"/>
+        <img src="https://img.icons8.com/material-rounded/96/ffffff/delete-forever.png"/>
       </div>
     </div>
   </div>
@@ -39,7 +56,7 @@
 
     <div class="buttons">
       <button *ngIf="!isPlaying" (click)="play()">
-        <img src="https://img.icons8.com/material/96/null/play--v1.png"/>
+        <img src="https://img.icons8.com/material/96/ab684c/play--v1.png"/>
       </button>
       <button *ngIf="isPlaying" [ngClass]="{'playing': isPlaying}" (click)="pause()">
         <img src="https://img.icons8.com/material/96/678f67/pause--v1.png"/>
@@ -59,13 +76,13 @@
     <!-- Control: BUTTONS -->
     <div class="buttons">
       <button [ngClass]="{'muted': isMuted}" (click)="muteAudio()">
-        <img src="https://img.icons8.com/material/96/null/no-audio--v1.png"/>
+        <img src="https://img.icons8.com/material/96/ab684c/no-audio--v1.png"/>
       </button>
       <button [ngClass]="{'active': subtitleLanguage !== 'en'}" (click)="swapSubtitleLanguage()">
-        <img src="https://img.icons8.com/material/96/null/google-translate.png"/>
+        <img src="https://img.icons8.com/material/96/ab684c/google-translate.png"/>
       </button>
       <button (click)="regenerateSubtitle('SRT')">
-        <img src="https://img.icons8.com/material/96/null/download--v1.png"/>
+        <img src="https://img.icons8.com/material/96/ab684c/download--v1.png"/>
       </button>
     </div>
 
@@ -127,10 +144,18 @@
 
         <!-- Buttons -->
         <div class="buttons">
-          <button *ngIf="id === 0 || id === (workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, false, subtitle)">Delete</button>
-          <button *ngIf="id > 0 && (id < workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, true, subtitle)">Shift Up</button>
-          <button *ngIf="id > 0 && (id < workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, false, subtitle)">Shift Down</button>
-          <button (click)="onSplitSubtitle(id)">Split Subtitle</button>
+          <button *ngIf="id === 0 || id === (workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, false, subtitle)">
+            <img src="https://img.icons8.com/material-rounded/96/ab684c/delete-forever.png"/>
+          </button>
+          <button *ngIf="id > 0 && (id < workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, true, subtitle)">
+            <img src="https://img.icons8.com/material/96/ab684c/left-up2--v1.png"/>
+          </button>
+          <button (click)="onSplitSubtitle(id)">
+            <img src="https://img.icons8.com/material/96/ab684c/split-horizontal--v1.png"/>
+          </button>
+          <button *ngIf="id > 0 && (id < workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, false, subtitle)">
+            <img src="https://img.icons8.com/material/96/ab684c/down2--v2.png"/>
+          </button>
         </div>
 
       </div>

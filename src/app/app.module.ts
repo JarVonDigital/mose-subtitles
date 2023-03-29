@@ -12,7 +12,7 @@ import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { AppComponent } from './app.component';
-import { EditorComponent } from './editor/editor.component';
+import { EditorComponent } from './@views/editor/editor.component';
 import { LoadingComponent } from './@views/loading/loading.component';
 
 // AoT requires an exported function for factories

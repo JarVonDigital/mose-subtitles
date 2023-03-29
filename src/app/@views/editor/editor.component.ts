@@ -1,8 +1,8 @@
 import {AfterContentInit, Component, OnChanges, OnInit, SimpleChanges} from '@angular/core';
-import {ElectronService} from '../core/services';
+import {ElectronService} from '../../core/services';
 import {Howl} from 'howler';
-import {Subtitle} from '../@interfaces/subtitle';
-import {SubtitleBite} from '../@interfaces/subtitle-bite';
+import {Subtitle} from '../../@interfaces/subtitle';
+import {SubtitleBite} from '../../@interfaces/subtitle-bite';
 import {HttpClient} from '@angular/common/http';
 import {DomSanitizer, SafeUrl} from "@angular/platform-browser";
 
@@ -44,6 +44,8 @@ export class EditorComponent implements OnInit, OnChanges {
   public updatingNumber = 1;
   isTranslating = false;
   isTranslationHidden = false;
+  isUploading = false;
+  uploadedFile: undefined;
 
   constructor(
     private app: ElectronService,
@@ -52,14 +54,12 @@ export class EditorComponent implements OnInit, OnChanges {
   ) {
   }
 
-  ngOnInit(): void {
-    this.app.getDocumentsDirectory()
-      .then(data => {
-        console.log(data);
-        this.documentURL = data;
-      })
-      .then(() => this.loadFolderContent())
-      .catch(err => console.log(err));
+  async ngOnInit(): Promise<void> {
+    try {
+      const dirData = await this.app.getDocumentsDirectory();
+      this.documentURL = dirData;
+      this.loadFolderContent();
+    } catch (err) { console.log(err); }
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -405,6 +405,20 @@ export class EditorComponent implements OnInit, OnChanges {
 
     this.onSaveSubtitle();
 
+  }
+
+  onSelectMediaToUpload() {
+    this.isUploading = true;
+    this.uploadedFile = undefined;
+    this.app.ipcRenderer.invoke('selectMediaToUpload')
+      .then(file => {
+        if(file) {
+          this.uploadedFile = file;
+          window.alert(file);
+          this.ngOnInit();
+        }
+        this.isUploading = false;
+      });
   }
 
   private loadFolderContent() {

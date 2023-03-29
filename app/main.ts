@@ -1,4 +1,4 @@
-import {app, BrowserWindow, screen, ipcMain, protocol} from 'electron';
+import {app, BrowserWindow, screen, ipcMain, protocol, dialog} from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -14,8 +14,8 @@ import {ChildProcess, execSync, spawn} from "child_process";
 import * as url from "url";
 import {Subtitle} from "../src/app/@interfaces/subtitle";
 import {getDocumentsFolder} from "platform-folders";
-import {FSWatcher} from "fs";
-import Timeout = NodeJS.Timeout;
+import {copyFileSync, FSWatcher} from "fs";
+import {COPYFILE_FICLONE} from "constants";
 
 let translateServer: ChildProcess;
 
@@ -90,7 +90,7 @@ function removeSystemFilesFromArray(videoFiles: string[]) {
   return newlyDefinedArray;
 }
 
-function doRunFileChecker() {
+async function doRunFileChecker() {
 
   // Get Video Files On System
   let videoFiles = removeSystemFilesFromArray(
@@ -107,9 +107,11 @@ function doRunFileChecker() {
   );
 
   let audioFilesWithoutExtension = [];
-      audioFiles.forEach(audio => audioFilesWithoutExtension.push(audio[1]));
+  for(let audio of audioFiles) {
+    audioFilesWithoutExtension.push(audio[1]);
+  }
 
-  videoFiles.forEach(file => {
+  for(let file of videoFiles) {
     let videoFileWithNoExtension = file[1];
     if(!audioFilesWithoutExtension.includes(videoFileWithNoExtension)) {
       console.log(file);
@@ -118,10 +120,9 @@ function doRunFileChecker() {
       console.log(commandToRun);
       execSync(commandToRun); // Execute Command
       // Create JSON File
-      generateSubtitles(file[0], "JSON")
-        .catch(err => console.log(err));
+      await generateSubtitles(file[0], "JSON")
     }
-  })
+  }
 }
 
 try {
@@ -158,10 +159,7 @@ try {
     }
   });
 
-  app.on("will-quit", () => {
-    // Kill Translate Server
-    translateServer.kill('SIGTERM')
-  })
+  app.on("will-quit", () => {})
 
   // Handlers
   ipcMain.handle("getSingleFile", async (ev, arg) => await getSingleFile(arg[0], arg[1]))
@@ -177,26 +175,26 @@ try {
       // Check Folder Exist
       let verifySystem = fs.existsSync(path.join(getDocumentsFolder(), '@JWVT', 'SYSTEM', '.mose'));
 
-      // Start File watcher
-      let toProceedWithAction: Timeout;
-      if(systemFileWatcher !== undefined) systemFileWatcher.close();
-      systemFileWatcher = fs.watch(path.join(getDocumentsFolder(), '@JWVT', 'videos'), (event, file) => {
-        if(toProceedWithAction) clearTimeout(toProceedWithAction);
-
-        // Prevent Window from being closed while operations are happening
-        win.closable = false;
-
-        // Proceed with any actions relating to file
-        toProceedWithAction = setTimeout(() => {
-          // This is where we will handle new data
-          doRunFileChecker()
-
-          // Allow Window to be closed after operation
-          win.closable = true;
-        }, 5000);
-
-
-      })
+      // // Start File watcher
+      // let toProceedWithAction: Timeout;
+      // if(systemFileWatcher !== undefined) systemFileWatcher.close();
+      // systemFileWatcher = fs.watch(path.join(getDocumentsFolder(), '@JWVT', 'videos'), (event, file) => {
+      //   if(toProceedWithAction) clearTimeout(toProceedWithAction);
+      //
+      //   // Prevent Window from being closed while operations are happening
+      //   win.closable = false;
+      //
+      //   // Proceed with any actions relating to file
+      //   toProceedWithAction = setTimeout(() => {
+      //     // This is where we will handle new data
+      //     doRunFileChecker()
+      //
+      //     // Allow Window to be closed after operation
+      //     win.closable = true;
+      //   }, 5000);
+      //
+      //
+      // })
 
       if(verifySystem) {
         res(true);
@@ -207,6 +205,32 @@ try {
     })
 
     return data;
+  })
+
+  // Handle Media Upload
+  ipcMain.handle("selectMediaToUpload", async (ev, arg) => {
+    let fileLocation = dialog.showOpenDialogSync({
+      title: "MOSE | Upload Media",
+      buttonLabel: "Upload Media",
+      properties: ["openFile", "noResolveAliases", "treatPackageAsDirectory"],
+      filters: [
+        {
+          name: "Videos",
+          extensions: [".mp4"]
+        }
+      ]
+    })
+
+    // File Selected
+    if(fileLocation) {
+      let fileName = path.parse(fileLocation[0]).name + path.parse(fileLocation[0]).ext;
+      copyFileSync(fileLocation[0], path.join(getDocumentsFolder(), '@JWVT', 'videos', fileName), COPYFILE_FICLONE)
+      win.closable = false;
+      await doRunFileChecker();
+      win.closable = true;
+    }
+
+    return fileLocation;
   })
 
 } catch (e) {
