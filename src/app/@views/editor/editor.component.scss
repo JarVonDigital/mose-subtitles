@@ -18,6 +18,37 @@ $SecondaryOrange: rgba(171, 104, 76, 0.70);
     min-width: 275px;
     background-color: rgb(245, 245, 245);
 
+    .location {
+      height: 30px;
+      display: flex;
+      margin: 10px;
+      border-radius: 25px;
+      overflow: hidden;
+
+      button {
+        flex: 1;
+        border: 2px solid grey;
+        outline: none;
+        font-weight: 600;
+        cursor: pointer;
+
+        &.active {
+          color: $MainOrange;
+          border-color: $MainOrange;
+        }
+
+        &:first-of-type {
+          border-radius: 25px 0 0 25px;
+          border-right-width: 1px;
+        }
+
+        &:last-of-type {
+          border-radius: 0 25px 25px 0;
+          border-left-width: 1px;
+        }
+      }
+    }
+
     .data {
       flex: 1;
       overflow: auto;

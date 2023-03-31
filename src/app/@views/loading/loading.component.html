@@ -27,19 +27,19 @@
 
 <!-- Login Container -->
 <div class="container">
-  <div class="login">
+  <div class="login" [formGroup]="loginForm">
     <div class="input">
       <label>Email</label>
-      <input type="email" placeholder="email" name="">
+      <input type="email" placeholder="email" formControlName="email">
     </div>
 
     <div class="input">
       <label>Password</label>
-      <input type="password" placeholder="password" name="">
+      <input type="password" placeholder="password" formControlName="password">
     </div>
 
     <div class="buttons">
-      <button>Login</button>
+      <button (click)="onSignIn()">Login</button>
       <button (click)="skipLoginService()">Use Local</button>
     </div>
   </div>

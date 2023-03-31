@@ -1,10 +1,13 @@
-import {AfterContentInit, Component, OnChanges, OnInit, SimpleChanges} from '@angular/core';
+import {AfterContentInit, Component, inject, OnChanges, OnInit, SimpleChanges} from '@angular/core';
 import {ElectronService} from '../../core/services';
 import {Howl} from 'howler';
 import {Subtitle} from '../../@interfaces/subtitle';
 import {SubtitleBite} from '../../@interfaces/subtitle-bite';
 import {HttpClient} from '@angular/common/http';
-import {DomSanitizer, SafeUrl} from "@angular/platform-browser";
+import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
+import {Auth, User, user} from '@angular/fire/auth';
+import {Observable} from 'rxjs';
+import {addDoc, collection, doc, Firestore, getDoc, getDocs, query, setDoc, updateDoc} from "@angular/fire/firestore";
 
 interface FileContainer {
   original: string;
@@ -21,6 +24,7 @@ export class EditorComponent implements OnInit, OnChanges {
   path = window.require('path');
 
   public files: FileContainer[];
+  public cloudFiles: any[];
   public selectedFile: FileContainer;
   public workingFile: Subtitle;
 
@@ -46,26 +50,36 @@ export class EditorComponent implements OnInit, OnChanges {
   isTranslationHidden = false;
   isUploading = false;
   uploadedFile: undefined;
-
-  constructor(
-    private app: ElectronService,
-    private http: HttpClient,
-    private sanitizer: DomSanitizer
-  ) {
-  }
+  loggedInUser: Observable<User | null> | User;
+  isCloud: boolean = false;
+  private app: ElectronService = inject(ElectronService);
+  private http: HttpClient = inject(HttpClient);
+  private sanitizer: DomSanitizer = inject(DomSanitizer);
+  private auth: Auth = inject(Auth);
+  private firestore: Firestore = inject(Firestore);
+  private user$ = user(this.auth);
 
   async ngOnInit(): Promise<void> {
+
     try {
+
+      this.loggedInUser = await this.user$;
+
       const dirData = await this.app.getDocumentsDirectory();
       this.documentURL = dirData;
+      const subtitleQuery = await query(collection(this.firestore, 'subtitles'));
+      this.cloudFiles = (await getDocs(subtitleQuery)).docs.map(sub => sub.data());
+      console.log(this.cloudFiles);
       this.loadFolderContent();
+
     } catch (err) { console.log(err); }
+
   }
 
   ngOnChanges(changes: SimpleChanges) {
   }
 
-  loadContent(parseFileName?) {
+  loadContent(parseFileName?, index?: number, isCloud?: boolean) {
 
     this.selectedFile = parseFileName ? parseFileName : this.selectedFile;
 
@@ -77,13 +91,19 @@ export class EditorComponent implements OnInit, OnChanges {
 
     this.videoURL = '';
 
-    this.app.getSingleFile('SUBTITLE', `${this.selectedFile.clean}.json`)
-      .then((file) => {
-        this.workingFile = JSON.parse(file);
-        this.initSound();
-      }).catch(err => {
-      console.log(err);
-    });
+    if(this.isCloud) {
+      this.workingFile = this.cloudFiles[index];
+      this.initSound();
+    } else if(!this.isCloud) {
+      this.app.getSingleFile('SUBTITLE', `${this.selectedFile.clean}.json`)
+        .then((file) => {
+          this.workingFile = JSON.parse(file);
+          this.initSound();
+        }).catch(err => {
+        console.log(err);
+      });
+    }
+
 
   }
 
@@ -93,7 +113,7 @@ export class EditorComponent implements OnInit, OnChanges {
     this.showSubtitle = false;
 
     const audioURL = this.path.join(this.documentURL, '@JWVT', this.workingFile.location.split('@JWVT')[1]);
-    console.log(audioURL);
+
     // Setup Sound Source
     this.sound = new Howl({
       src: [`mose://${audioURL}`]
@@ -101,7 +121,7 @@ export class EditorComponent implements OnInit, OnChanges {
 
     // // Setup Video File
     this.videoURL = this.sanitizer.bypassSecurityTrustUrl(
-      `mose://${this.documentURL}/@JWVT/videos/${this.selectedFile.original}`
+      `mose://${this.documentURL}/@JWVT/videos/${this.path.parse(this.workingFile.location).name}.mp4`
     );
 
     this.videoPlayer = document.getElementById('videoPlayer') as HTMLVideoElement;
@@ -282,20 +302,37 @@ export class EditorComponent implements OnInit, OnChanges {
     }
 
     this.isTranslating = false;
-    window.alert(`Translation Complete: ${this.updatingNumber}/${this.workingFile.subtitles.length}`)
+    window.alert(`Translation Complete: ${this.updatingNumber}/${this.workingFile.subtitles.length}`);
   }
 
   swapSubtitleLanguage() {
     this.subtitleLanguage = this.subtitleLanguage === 'en' ? 'es' : 'en';
   }
 
-  onSaveSubtitle() {
-    this.app.saveSubtitleFile(`${this.selectedFile.clean}.json`, this.workingFile)
-      .then((status) => {
-        if (status) {
-          window.alert(`Working File Saved @ ${new Date()}!`);
+  async onSaveSubtitle() {
+
+    try {
+      this.workingFile.title = this.selectedFile.clean;
+      const save = await this.app.saveSubtitleFile(`${this.selectedFile.clean}.json`, this.workingFile);
+
+      if (save && !this.workingFile.isCloudEnabled) {
+        window.alert(`Working File Saved @ ${new Date()}!`);
+      } else if(save && this.workingFile.isCloudEnabled) {
+
+        // Check to see if file exist in system
+        const fireWorkingFile = doc(this.firestore, `subtitles/${this.selectedFile.clean}`);
+        const document = await getDoc(fireWorkingFile);
+
+        if(document.exists()) {
+          // @ts-ignore
+          const update = updateDoc(doc(this.firestore, `subtitles/${this.selectedFile.clean}`), this.workingFile);
+        } else {
+          const saveLocation = await doc(this.firestore, `subtitles/${this.selectedFile.clean}`);
+          const saveDoc = await setDoc(saveLocation, this.workingFile);
         }
-      });
+      }
+    } catch (err) { console.log(err); }
+
   }
 
   onDeleteSubtitle(id: number, shiftUp = false, subtitle?: SubtitleBite) {
@@ -419,6 +456,22 @@ export class EditorComponent implements OnInit, OnChanges {
         }
         this.isUploading = false;
       });
+  }
+
+  uploadToCloud() {
+    if(this.workingFile.isCloudEnabled) {
+      const confirm = window.confirm(`Are you sure? Your document will only be available local!`);
+      if(confirm) {
+        this.workingFile.isCloudEnabled = false;
+        this.onSaveSubtitle();
+      }
+    } else {
+      const confirm = window.confirm(`Your document will now be CloudEnabled and kept in sync with its cloud adjacent.`);
+      if(confirm) {
+        this.workingFile.isCloudEnabled = true;
+        this.onSaveSubtitle();
+      }
+    }
   }
 
   private loadFolderContent() {

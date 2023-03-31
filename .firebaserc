@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "mosesubtitles"
+  },
+  "targets": {
+    "mosesubtitles": {
+      "hosting": {
+        "angular-electron": [
+          "mosesubtitles"
+        ]
+      }
+    }
   }
 }

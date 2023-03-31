@@ -199,7 +199,7 @@ try {
             filters: [
                 {
                     name: "Videos",
-                    extensions: [".mp4"]
+                    extensions: [".mp4", ".MP4"]
                 }
             ]
         });
