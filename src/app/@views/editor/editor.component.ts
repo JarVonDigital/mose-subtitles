@@ -1,4 +1,4 @@
-import {AfterContentInit, Component, inject, OnChanges, OnInit, SimpleChanges} from '@angular/core';
+import { Component, inject, OnChanges, OnInit, SimpleChanges} from '@angular/core';
 import {ElectronService} from '../../core/services';
 import {Howl} from 'howler';
 import {Subtitle} from '../../@interfaces/subtitle';
@@ -7,7 +7,7 @@ import {HttpClient} from '@angular/common/http';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 import {Auth, User, user} from '@angular/fire/auth';
 import {Observable} from 'rxjs';
-import {addDoc, collection, doc, Firestore, getDoc, getDocs, query, setDoc, updateDoc} from "@angular/fire/firestore";
+import {collection, doc, Firestore, getDoc, getDocs, query, setDoc, updateDoc} from '@angular/fire/firestore';
 
 interface FileContainer {
   original: string;
@@ -51,7 +51,7 @@ export class EditorComponent implements OnInit, OnChanges {
   isUploading = false;
   uploadedFile: undefined;
   loggedInUser: Observable<User | null> | User;
-  isCloud: boolean = false;
+  isCloud = false;
   private app: ElectronService = inject(ElectronService);
   private http: HttpClient = inject(HttpClient);
   private sanitizer: DomSanitizer = inject(DomSanitizer);
@@ -79,7 +79,7 @@ export class EditorComponent implements OnInit, OnChanges {
   ngOnChanges(changes: SimpleChanges) {
   }
 
-  loadContent(parseFileName?, index?: number, isCloud?: boolean) {
+  loadContent(parseFileName?, index?: number) {
 
     this.selectedFile = parseFileName ? parseFileName : this.selectedFile;
 
@@ -92,6 +92,7 @@ export class EditorComponent implements OnInit, OnChanges {
     this.videoURL = '';
 
     if(this.isCloud) {
+      console.log(this.cloudFiles)
       this.workingFile = this.cloudFiles[index];
       this.initSound();
     } else if(!this.isCloud) {
@@ -114,6 +115,8 @@ export class EditorComponent implements OnInit, OnChanges {
 
     const audioURL = this.path.join(this.documentURL, '@JWVT', this.workingFile.location.split('@JWVT')[1]);
 
+    console.log(audioURL);
+
     // Setup Sound Source
     this.sound = new Howl({
       src: [`mose://${audioURL}`]
@@ -129,6 +132,7 @@ export class EditorComponent implements OnInit, OnChanges {
 
     // Handle : SOUND PLAYING
     this.sound.on('play', () => {
+      console.log('playing...');
       this.isPlaying = this.sound.playing();
       this.showSubtitle = true; // Show Subtitle on screen
 
@@ -189,7 +193,6 @@ export class EditorComponent implements OnInit, OnChanges {
       this.sound.pause();
     } else {
       const videoPlayer = document.getElementById('videoPlayer') as HTMLVideoElement;
-      videoPlayer.muted = true;
       videoPlayer.play();
       this.sound.play();
     }
@@ -320,16 +323,21 @@ export class EditorComponent implements OnInit, OnChanges {
       } else if(save && this.workingFile.isCloudEnabled) {
 
         // Check to see if file exist in system
-        const fireWorkingFile = doc(this.firestore, `subtitles/${this.selectedFile.clean}`);
+        const fireWorkingFile = doc(this.firestore, `subtitles`, this.selectedFile.clean);
         const document = await getDoc(fireWorkingFile);
+
+        console.log(document.data());
 
         if(document.exists()) {
           // @ts-ignore
-          const update = updateDoc(doc(this.firestore, `subtitles/${this.selectedFile.clean}`), this.workingFile);
+          const update = await updateDoc(doc(this.firestore, `subtitles`, this.selectedFile.clean), this.workingFile);
         } else {
-          const saveLocation = await doc(this.firestore, `subtitles/${this.selectedFile.clean}`);
+          const saveLocation = doc(this.firestore, `subtitles`, this.selectedFile.clean);
           const saveDoc = await setDoc(saveLocation, this.workingFile);
         }
+
+        window.alert(`Working File Saved @ ${new Date()}!`);
+
       }
     } catch (err) { console.log(err); }
 
@@ -386,10 +394,6 @@ export class EditorComponent implements OnInit, OnChanges {
     }
 
   }
-
-  onAddNewSubtitle(id: number) {
-  }
-
   onToggleTranslation() {
     this.isTranslationHidden = !this.isTranslationHidden;
   }
@@ -474,6 +478,10 @@ export class EditorComponent implements OnInit, OnChanges {
     }
   }
 
+  getOriginal(location) {
+    return this.path.parse(location).base;
+  }
+
   private loadFolderContent() {
     this.app.getFolderContent('video')
       .then((videoFiles: any[]) => {
@@ -496,4 +504,5 @@ export class EditorComponent implements OnInit, OnChanges {
         this.loadContent();
       });
   }
+
 }
