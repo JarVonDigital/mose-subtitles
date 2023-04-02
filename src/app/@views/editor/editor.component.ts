@@ -455,7 +455,7 @@ export class EditorComponent implements OnInit, OnChanges {
       .then(file => {
         if(file) {
           this.uploadedFile = file;
-          window.alert(file);
+          window.alert(`Working file has been created for video located at: ${file}`);
           this.ngOnInit();
         }
         this.isUploading = false;
