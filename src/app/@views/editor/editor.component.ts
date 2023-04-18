@@ -8,6 +8,7 @@ import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 import {Auth, User, user} from '@angular/fire/auth';
 import {Observable} from 'rxjs';
 import {collection, doc, Firestore, getDoc, getDocs, query, setDoc, updateDoc} from '@angular/fire/firestore';
+import {Router} from "@angular/router";
 
 interface FileContainer {
   original: string;
@@ -54,6 +55,7 @@ export class EditorComponent implements OnInit, OnChanges {
   isCloud = false;
   private app: ElectronService = inject(ElectronService);
   private http: HttpClient = inject(HttpClient);
+  private router: Router = inject(Router);
   private sanitizer: DomSanitizer = inject(DomSanitizer);
   private auth: Auth = inject(Auth);
   private firestore: Firestore = inject(Firestore);
@@ -482,6 +484,13 @@ export class EditorComponent implements OnInit, OnChanges {
     return this.path.parse(location).base;
   }
 
+  onLogout() {
+    if(window.confirm('You\'re about to logout. Are you sure?')) {
+      this.auth.signOut()
+        .then(() => this.router.navigate(['loading']));
+    }
+  }
+
   private loadFolderContent() {
     this.app.getFolderContent('video')
       .then((videoFiles: any[]) => {
@@ -504,5 +513,4 @@ export class EditorComponent implements OnInit, OnChanges {
         this.loadContent();
       });
   }
-
 }

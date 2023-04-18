@@ -156,6 +156,11 @@ $SecondaryOrange: rgba(171, 104, 76, 0.70);
           flex: 1;
           margin: 10px;
           display: block;
+          
+          &:hover {
+            opacity: .7;
+            cursor: pointer;
+          }
         }
       }
 

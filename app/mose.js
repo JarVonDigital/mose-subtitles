@@ -190,7 +190,15 @@ function generateSubtitles(saveLocation, filesToCreate = "") {
             };
             if (filesToCreate === "ALL" || filesToCreate === "JSON") {
                 transcribe = yield transcriber.transcription
-                    .preRecorded(source, { times: false, punctuate: true, utterances: true });
+                    .preRecorded(source, {
+                    times: false,
+                    punctuate: true,
+                    utterances: true,
+                    utt_split: 1,
+                    numbers: true,
+                    tier: "nova",
+                    keywords: ["Watchtower:2.2", "CAD:2.2"]
+                });
             }
             if (!(0, fs_1.existsSync)(path.join(subtitlesFolder, 'english')))
                 (0, fs_1.mkdirSync)(path.join(subtitlesFolder, 'english'));

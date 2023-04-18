@@ -184,7 +184,15 @@ export async function generateSubtitles(saveLocation, filesToCreate = "") {
 
     if(filesToCreate === "ALL" || filesToCreate === "JSON") {
       transcribe = await transcriber.transcription
-        .preRecorded(source, {times: false, punctuate: true, utterances: true})
+        .preRecorded(source, {
+          times: false,
+          punctuate: true,
+          utterances: true,
+          utt_split: 1,
+          numbers: true,
+          tier: "nova",
+          keywords: ["Watchtower:2.2", "CAD:2.2"]
+        })
     }
 
     if(!existsSync(path.join(subtitlesFolder, 'english'))) mkdirSync(path.join(subtitlesFolder, 'english'));

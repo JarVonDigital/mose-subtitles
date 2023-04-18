@@ -1,8 +1,10 @@
 import {Component, inject, OnInit} from '@angular/core';
 import {ElectronService} from '../../core/services';
 import {Router} from '@angular/router';
-import {Auth, signInWithEmailAndPassword} from "@angular/fire/auth";
+import {Auth, getAuth, inMemoryPersistence, onAuthStateChanged, setPersistence, signInWithEmailAndPassword} from "@angular/fire/auth";
 import {FormControl, FormGroup, Validators} from '@angular/forms';
+import {PERSISTENCE} from "@angular/fire/compat/auth";
+import {PERSISTENCE_SETTINGS} from "@angular/fire/compat/firestore";
 
 @Component({
   selector: 'app-loading',
@@ -24,6 +26,19 @@ export class LoadingComponent implements OnInit {
     this.initAVServices(); // ONLY RUNS ONCE
     this.initSecureServices(); // ONLY RUNS ONCE
 
+      if(getAuth().currentUser) {
+        console.log(this.auth.currentUser);
+        this.router.navigate(['home']);
+      } else {
+        console.log('no user');
+      }
+
+    window.addEventListener('keyup', (ev) => {
+      if (ev.key === 'Enter') {
+        this.onSignIn()
+      }
+    });
+
     this.loginForm = new FormGroup<any>({
       email: new FormControl('', [Validators.email, Validators.required]),
       password: new FormControl('', [Validators.required])
@@ -34,17 +49,18 @@ export class LoadingComponent implements OnInit {
     this.router.navigate(['home']);
   }
 
-  onSignIn() {
+  async onSignIn() {
     const email = this.loginForm.get('email').getRawValue();
     const password = this.loginForm.get('password').getRawValue();
-    signInWithEmailAndPassword(this.auth, email, password)
-      .then(user => {
-        if(user) {
-          console.log(user);
-          this.router.navigate(['home']);
-        }
-      })
-      .catch(err => console.log(`Credentials don't match, please try email and password again`));
+
+    const user = await signInWithEmailAndPassword(this.auth, email, password);
+
+    if(user) {
+      console.log(user);
+      this.router.navigate(['home']);
+    } else {
+      console.log(`Credentials don't match, please try email and password again`)
+    };
   }
 
   private initAVServices() {
