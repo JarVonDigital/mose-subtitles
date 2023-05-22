@@ -1,4 +1,4 @@
-import { Component, inject, OnChanges, OnInit, SimpleChanges} from '@angular/core';
+import { Component, inject, OnInit} from '@angular/core';
 import {ElectronService} from '../../core/services';
 import {Howl} from 'howler';
 import {Subtitle} from '../../@interfaces/subtitle';
@@ -7,78 +7,114 @@ import {HttpClient} from '@angular/common/http';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 import {Auth, User, user} from '@angular/fire/auth';
 import {Observable} from 'rxjs';
-import {collection, doc, Firestore, getDoc, getDocs, query, setDoc, updateDoc} from '@angular/fire/firestore';
-import {Router} from "@angular/router";
+import {doc, Firestore, getDoc, query, setDoc, updateDoc} from '@angular/fire/firestore';
+import {Router} from '@angular/router';
+import {SubtitleService} from '../../@services/subtitle/subtitle.service';
+import {animate, stagger, style, transition, trigger, query as animationQuery} from "@angular/animations";
 
 interface FileContainer {
   original: string;
   clean: string;
 }
 
+const listAnimation = trigger('listAnimation', [
+  transition('* <=> *', [
+    animationQuery(':enter',
+      [style({ opacity: 0 }), stagger('60ms', animate('600ms ease-out', style({ opacity: 1 })))],
+      { optional: true }
+    ),
+    animationQuery(':leave',
+      animate('200ms', style({ opacity: 0 })),
+      { optional: true }
+    )
+  ])
+]);
+
+const listFadeInAnimation = trigger('listFadeInAnimation', [
+  transition('* <=> *', [
+    animationQuery(':enter',
+      [style({ opacity: 0 }), stagger('60ms', animate('600ms ease-out', style({ opacity: .5 })))],
+      { optional: true }
+    ),
+    animationQuery(':leave',
+      animate('200ms', style({ opacity: 0 })),
+      { optional: true }
+    )
+  ])
+]);
+
 @Component({
   selector: 'app-editor',
   templateUrl: './editor.component.html',
-  styleUrls: ['./editor.component.scss']
+  styleUrls: ['./editor.component.scss'],
+  animations:[
+    listAnimation,
+    listFadeInAnimation
+  ]
 })
-export class EditorComponent implements OnInit, OnChanges {
-
-  path = window.require('path');
+export class EditorComponent implements OnInit {
 
   public files: FileContainer[];
-  public cloudFiles: any[];
+  public cloudFiles: Subtitle[];
   public selectedFile: FileContainer;
   public workingFile: Subtitle;
 
   public isSrt = false;
   public isJson = false;
-
-  public sound: Howl;
-  public videoPlayer: HTMLVideoElement;
   public isPlaying = false;
-
-  public currentTime: number;
-  public currentSubtitle: SubtitleBite;
-  public time: NodeJS.Timer;
-  public isMuted = false;
-  public formattedCurrentTime: string;
-  public subtitleLanguage: 'en' | 'es' = 'en';
-  public documentURL: string;
-  public videoURL: SafeUrl;
   public showVideo = false;
   public showSubtitle = false;
   public updatingNumber = 1;
   isTranslating = false;
   isTranslationHidden = false;
   isUploading = false;
+  isCloud = false;
+
+  public sound: Howl;
+  public videoPlayer: HTMLVideoElement;
+
+  public availableVideoFiles: string[];
+  public currentSoundTime: number;
+  public activeSubtitle: SubtitleBite;
+  public time: NodeJS.Timer;
+  public formattedCurrentTime: string;
+  public subtitleLanguage: 'en' | 'es' = 'en';
+  public documentURL: string;
+  public videoURL: SafeUrl;
+  public unavailableLocal: Subtitle[];
+
   uploadedFile: undefined;
   loggedInUser: Observable<User | null> | User;
-  isCloud = false;
+
+  // NodeJS
+  private path = window.require('path');
+
+  // Injectors
   private app: ElectronService = inject(ElectronService);
   private http: HttpClient = inject(HttpClient);
   private router: Router = inject(Router);
   private sanitizer: DomSanitizer = inject(DomSanitizer);
   private auth: Auth = inject(Auth);
   private firestore: Firestore = inject(Firestore);
+  private subtitleService: SubtitleService = inject(SubtitleService);
   private user$ = user(this.auth);
 
   async ngOnInit(): Promise<void> {
 
     try {
 
+      // Get Logged In User
       this.loggedInUser = await this.user$;
+      this.documentURL = await this.app.getDocumentsDirectory();
 
-      const dirData = await this.app.getDocumentsDirectory();
-      this.documentURL = dirData;
-      const subtitleQuery = await query(collection(this.firestore, 'subtitles'));
-      this.cloudFiles = (await getDocs(subtitleQuery)).docs.map(sub => sub.data());
-      console.log(this.cloudFiles);
-      this.loadFolderContent();
+      // Get subtitles from cloud
+      this.cloudFiles = await this.subtitleService.getSubtitleFiles();
+
+      // Load folder content once complete
+      await this.loadFolderContent();
 
     } catch (err) { console.log(err); }
 
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
   }
 
   loadContent(parseFileName?, index?: number) {
@@ -93,19 +129,8 @@ export class EditorComponent implements OnInit, OnChanges {
 
     this.videoURL = '';
 
-    if(this.isCloud) {
-      console.log(this.cloudFiles)
-      this.workingFile = this.cloudFiles[index];
-      this.initSound();
-    } else if(!this.isCloud) {
-      this.app.getSingleFile('SUBTITLE', `${this.selectedFile.clean}.json`)
-        .then((file) => {
-          this.workingFile = JSON.parse(file);
-          this.initSound();
-        }).catch(err => {
-        console.log(err);
-      });
-    }
+    this.workingFile = this.cloudFiles.filter(file => file.title === parseFileName.clean)[0];
+    this.initSound();
 
 
   }
@@ -116,8 +141,6 @@ export class EditorComponent implements OnInit, OnChanges {
     this.showSubtitle = false;
 
     const audioURL = this.path.join(this.documentURL, '@JWVT', this.workingFile.location.split('@JWVT')[1]);
-
-    console.log(audioURL);
 
     // Setup Sound Source
     this.sound = new Howl({
@@ -142,14 +165,14 @@ export class EditorComponent implements OnInit, OnChanges {
       let currentSelected = -1;
 
       this.time = setInterval(() => {
-        this.currentTime = this.sound.seek();
-        this.formattedCurrentTime = new Date(this.currentTime * 1000).toISOString().substring(11, 19);
+        this.currentSoundTime = this.sound.seek();
+        this.formattedCurrentTime = new Date(this.currentSoundTime * 1000).toISOString().substring(11, 19);
         this.workingFile.subtitles.forEach((subtitle, index) => {
           if (this.thisSubtitleActive(subtitle)) {
             if (currentSelected !== index) {
               currentSelected = index;
               subtitle.isActive = true;
-              this.currentSubtitle = subtitle;
+              this.activeSubtitle = subtitle;
               this.scrollTo(index);
             }
           } else {
@@ -206,20 +229,11 @@ export class EditorComponent implements OnInit, OnChanges {
     this.sound.pause();
   }
 
-  muteAudio() {
-    if (this.isMuted) {
-      this.sound.mute(false);
-      this.isMuted = false;
-    } else {
-      this.sound.mute(true);
-      this.isMuted = true;
-    }
-
-  }
+  muteAudio($event: boolean) { this.sound.mute($event); }
 
   thisSubtitleActive(subtitle: SubtitleBite) {
-    const overTime = (this.currentTime > subtitle.sTime);
-    const underTime = (this.currentTime < subtitle.eTime);
+    const overTime = (this.currentSoundTime > subtitle.sTime);
+    const underTime = (this.currentSoundTime < subtitle.eTime);
     return (overTime && underTime);
   }
 
@@ -491,26 +505,46 @@ export class EditorComponent implements OnInit, OnChanges {
     }
   }
 
-  private loadFolderContent() {
-    this.app.getFolderContent('video')
-      .then((videoFiles: any[]) => {
+  checkLocalAvailability(cloudFiles: Subtitle[], returnUnavailable = false): Subtitle[] {
 
-        // Array for clean file names
-        const cleanFileNames = [];
+    this.unavailableLocal = [];
 
-        for (const video of videoFiles) {
-          const split = video.split('.');
-          const lastOfSplit = split.length - 1;
-          if (split.length > 1 && !split.includes('DS_Store')) {
-            if (!cleanFileNames.includes(video.replace(`.${split[lastOfSplit]}`, ''))) {
-              cleanFileNames.push({clean: video.replace(`.${split[lastOfSplit]}`, ''), original: video});
-            }
-          }
-        }
+    const sortedAvailableFiles = this.cloudFiles.filter((file) => {
+      const numberOfVideosLocal = this.availableVideoFiles.filter((avf) => avf.split('.')[0] === file.title);
 
-        this.files = cleanFileNames;
-        this.selectedFile = cleanFileNames[0];
-        this.loadContent();
-      });
+      if(numberOfVideosLocal.length > 0) {
+        return true;
+      } else {
+        this.unavailableLocal.push(file);
+        return false;
+      }
+
+    });
+
+    return returnUnavailable ? this.unavailableLocal : sortedAvailableFiles;
+
   }
+
+  private async loadFolderContent() {
+    this.availableVideoFiles = await this.app.getFolderContent('video');
+
+    // Array for clean file names
+    const cleanFileNames = [];
+
+    for (const video of this.availableVideoFiles) {
+      const split = video.split('.');
+      const lastOfSplit = split.length - 1;
+      if (split.length > 1 && !split.includes('DS_Store')) {
+        if (!cleanFileNames.includes(video.replace(`.${split[lastOfSplit]}`, ''))) {
+          cleanFileNames.push({clean: video.replace(`.${split[lastOfSplit]}`, ''), original: video});
+        }
+      }
+    }
+
+    this.files = cleanFileNames;
+    this.selectedFile = cleanFileNames[0];
+    this.loadContent();
+  }
+
+
 }

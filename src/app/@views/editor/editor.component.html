@@ -1,24 +1,28 @@
 
 <div class="selector">
-  <div class="location">
-    <button (click)="isCloud = false" [class]="{'active': !isCloud}">Local</button>
-    <button (click)="isCloud = true" [class]="{'active': isCloud}">Cloud</button>
-  </div>
-  <div class="data" *ngIf="!isCloud">
-    <li *ngFor="let parsedFileName of files" (click)="loadContent(parsedFileName)">
-      <div class="icon">
-        <img src="https://img.icons8.com/material-outlined/48/aaaaaa/laptop-play-video.png"/>
-      </div>
-      <div class="info">{{parsedFileName.clean}}</div>
-    </li>
-  </div>
-  <div class="data" *ngIf="isCloud">
-    <li *ngFor="let file of cloudFiles; let i = index" (click)="loadContent({clean: file.title, original: getOriginal(file.location)}, i)">
-      <div class="icon">
-        <img src="https://img.icons8.com/material-outlined/48/aaaaaa/laptop-play-video.png"/>
-      </div>
-      <div class="info">{{file.title}}</div>
-    </li>
+  <div class="data" *ngIf="availableVideoFiles">
+
+    <div [@listAnimation]="checkLocalAvailability(cloudFiles).length">
+      <!-- Available Files -->
+      <li *ngFor="let file of checkLocalAvailability(cloudFiles); let i = index" (click)="loadContent({clean: file.title, original: getOriginal(file.location)}, i)">
+        <div class="icon">
+          <img src="https://img.icons8.com/material-outlined/48/aaaaaa/laptop-play-video.png"/>
+        </div>
+        <div class="info">{{file.title}}</div>
+      </li>
+    </div>
+
+    <div @listFadeInAnimation>
+      <!-- Unavailable Files -->
+      <li *ngFor="let file of checkLocalAvailability(cloudFiles, true); let i = index" class="unavailable">
+        <div class="icon">
+          <img src="https://img.icons8.com/material-outlined/48/a44d4d/laptop-play-video.png"/>
+        </div>
+        <div class="info">{{file.title}}</div>
+      </li>
+    </div>
+
+
   </div>
   <div class="uploader">
     <div class="message">
@@ -65,47 +69,17 @@
     </div>
   </div>
 
-  <div class="video-container">
-    <video id="videoPlayer" class="main-video-player" [src]="videoURL"></video>
-    <div class="subtitle-block" *ngIf="subtitleLanguage === 'en' && showSubtitle">{{currentSubtitle?.utterance}}</div>
-    <div class="subtitle-block" *ngIf="subtitleLanguage !== 'en' && showSubtitle">{{currentSubtitle?.languages[subtitleLanguage]}}</div>
-  </div>
-
-  <div class="controls">
-
-    <div class="buttons">
-      <button *ngIf="!isPlaying" (click)="play()">
-        <img src="https://img.icons8.com/material/96/ab684c/play--v1.png"/>
-      </button>
-      <button *ngIf="isPlaying" [ngClass]="{'playing': isPlaying}" (click)="pause()">
-        <img src="https://img.icons8.com/material/96/678f67/pause--v1.png"/>
-      </button>
-    </div>
-
-    <div class="slider">
-
-      <div class="slider-header" *ngIf="selectedFile">
-        <h3>{{selectedFile.clean}}</h3>
-        <h4>{{formattedCurrentTime  || '00:00:00'}}</h4>
-      </div>
-
-      <input type="range" [value]="currentTime" min="0" [max]="sound?.duration(0)" (input)="onChangeRange($event)">
-    </div>
-
-    <!-- Control: BUTTONS -->
-    <div class="buttons">
-      <button [ngClass]="{'muted': isMuted}" (click)="muteAudio()">
-        <img src="https://img.icons8.com/material/96/ab684c/no-audio--v1.png"/>
-      </button>
-      <button [ngClass]="{'active': subtitleLanguage !== 'en'}" (click)="swapSubtitleLanguage()">
-        <img src="https://img.icons8.com/material/96/ab684c/google-translate.png"/>
-      </button>
-      <button (click)="regenerateSubtitle('SRT')">
-        <img src="https://img.icons8.com/material/96/ab684c/download--v1.png"/>
-      </button>
-    </div>
-
-  </div>
+  <!-- Video Player -->
+  <app-video-player [videoURL]="videoURL" [activeSubtitle]="activeSubtitle"></app-video-player>
+  <app-audio-player
+    [audioControl]="sound"
+    [currentAudioTime]="currentSoundTime"
+    [activeSubtitleFile]="workingFile"
+    (playAudio)="play()"
+    (pauseAudio)="pause()"
+    (muteAudio)="muteAudio($event)"
+    (seekAudio)="playFrom($event)"
+  ></app-audio-player>
 
 </div>
 
@@ -131,7 +105,7 @@
           </button>
 
           <!-- SYNC Position -->
-          <h3><small>SYNC</small>: {{subtitle.sTime | number}}</h3>
+          <h3><small>SYNC</small>: {{subtitle.sTime | audioToVideo}}</h3>
 
           <!--
           Translate Button

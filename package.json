@@ -1,6 +1,6 @@
 {
   "name": "mose-subtitles",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Angular 14 with Electron 21 (Typescript + SASS + Hot Reload)",
   "main": "app/main.js",
   "private": true,
@@ -19,6 +19,7 @@
     "electron:serve": "wait-on tcp:4200 && npm run electron:serve-tsc && electron . --serve",
     "electron:local": "npm run build:prod && electron .",
     "electron:build": "npm run build:prod && electron-builder build --win --x64 --publish=never",
+    "electron:buildMac": "npm run build:prod && electron-builder build --publish=never",
     "test": "ng test --watch=false",
     "test:watch": "ng test",
     "e2e": "npm run build:prod && playwright test -c e2e/playwright.config.ts e2e/",
@@ -27,6 +28,7 @@
     "lint": "ng lint"
   },
   "dependencies": {
+    "@angular/animations": "14.2.6",
     "@angular/common": "14.2.6",
     "@angular/compiler": "14.2.6",
     "@angular/core": "14.2.6",

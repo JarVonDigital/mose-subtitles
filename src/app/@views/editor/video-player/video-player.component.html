@@ -1,0 +1,3 @@
+<video id="videoPlayer" class="main-video-player" [src]="videoURL"></video>
+<div class="subtitle-block" *ngIf="subtitleLanguage === 'en' && showSubtitle">{{activeSubtitle?.utterance}}</div>
+<div class="subtitle-block" *ngIf="subtitleLanguage !== 'en' && showSubtitle">{{activeSubtitle?.languages[subtitleLanguage]}}</div>

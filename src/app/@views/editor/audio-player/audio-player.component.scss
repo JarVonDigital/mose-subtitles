@@ -1,0 +1,107 @@
+:host {
+  display: flex;
+  margin: 15px;
+  padding: 10px 0;
+  border: 2px solid rgb(230, 230, 230);
+  border-radius: 10px;
+  overflow: hidden;
+
+  .buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-content: space-between;
+
+    button {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 30px;
+      width: 30px;
+      max-height: 30px;
+      max-width: 30px;
+      background-color: transparent;
+      border: 4px solid transparent;
+      margin: 0 10px;
+      border-radius: 50px;
+
+      &.playing {
+        border-color: #678f67;
+      }
+
+      &.muted {
+        border-color: #983e3e;
+      }
+
+      &.active {
+        border-color: black;
+      }
+
+      img {
+        display: block;
+        height: 25px;
+        width: auto;
+      }
+
+      &:hover {
+        border-color: grey;
+        cursor: pointer;
+        opacity: .8;
+      }
+    }
+  }
+
+  .slider {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+
+    .slider-header {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      align-content: space-between;
+      margin: 0 30px;
+
+      h3 {
+        flex: 1;
+        font-size: 13px;
+        margin: 0;
+      }
+
+      h4 {
+        width: 200px;
+        text-align: right;
+        margin: 0;
+      }
+    }
+
+    h2 {
+      flex: 1;
+      max-height: 30px;
+      margin: 0 25px;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      align-content: space-between;
+      justify-content: center;
+
+      small {
+        display: flex;
+        text-align: right;
+        width: 100px;
+      }
+    }
+
+    input {
+      flex: 1;
+      max-height: 30px;
+      width: calc(100% - 50px);
+      margin: 0 25px;
+    }
+  }
+
+
+}

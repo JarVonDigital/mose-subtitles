@@ -1,0 +1,31 @@
+<div class="buttons">
+  <button *ngIf="!isPlaying" (click)="onPlayAudio()">
+    <img src="https://img.icons8.com/material/96/ab684c/play--v1.png"/>
+  </button>
+  <button *ngIf="isPlaying" [ngClass]="{'playing': isPlaying}" (click)="onPauseAudio()">
+    <img src="https://img.icons8.com/material/96/678f67/pause--v1.png"/>
+  </button>
+</div>
+
+<div class="slider">
+
+  <div class="slider-header" *ngIf="activeSubtitleFile">
+    <h3>{{activeSubtitleFile.title}}</h3>
+    <h4>{{(currentAudioTime || 0) | audioToVideo}}</h4>
+  </div>
+
+  <input type="range" [value]="currentAudioTime" min="0" [max]="audioControl?.duration(0)" (input)="onSeekAudio($event)">
+</div>
+
+<!-- Control: BUTTONS -->
+<div class="buttons">
+  <button [ngClass]="{'muted': isMuted}" (click)="onMuteAudio()">
+    <img src="https://img.icons8.com/material/96/ab684c/no-audio--v1.png"/>
+  </button>
+  <button [ngClass]="{'active': subtitleLanguage !== 'en'}" (click)="onChangeSubtitleLanguage()">
+    <img src="https://img.icons8.com/material/96/ab684c/google-translate.png"/>
+  </button>
+  <button (click)="regenerateSubtitle('SRT')">
+    <img src="https://img.icons8.com/material/96/ab684c/download--v1.png"/>
+  </button>
+</div>

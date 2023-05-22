@@ -1,26 +1,16 @@
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
-import { PageNotFoundComponent } from './shared/components';
 import {EditorComponent} from './@views/editor/editor.component';
-import {LoadingComponent} from './@views/loading/loading.component';
 
 const routes: Routes = [
   {
     path: '',
-    redirectTo: 'loading',
+    redirectTo: 'editor',
     pathMatch: 'full'
   },
   {
-    path: 'loading',
-    component: LoadingComponent
-  },
-  {
-    path: 'home',
+    path: 'editor',
     component: EditorComponent
-  },
-  {
-    path: '**',
-    component: PageNotFoundComponent
   }
 ];
 
