@@ -5,12 +5,12 @@ import {Subtitle} from '../../@interfaces/subtitle';
 import {SubtitleBite} from '../../@interfaces/subtitle-bite';
 import {HttpClient} from '@angular/common/http';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
-import {Auth, User, user} from '@angular/fire/auth';
-import {Observable} from 'rxjs';
-import {doc, Firestore, getDoc, query, setDoc, updateDoc} from '@angular/fire/firestore';
+import {Auth, signInWithEmailAndPassword, User, user} from '@angular/fire/auth';
+import {firstValueFrom, Observable} from 'rxjs';
 import {Router} from '@angular/router';
 import {SubtitleService} from '../../@services/subtitle/subtitle.service';
 import {animate, stagger, style, transition, trigger, query as animationQuery} from "@angular/animations";
+import {FormControl, FormGroup, Validators} from "@angular/forms";
 
 interface FileContainer {
   original: string;
@@ -68,10 +68,12 @@ export class EditorComponent implements OnInit {
   isTranslating = false;
   isTranslationHidden = false;
   isUploading = false;
-  isCloud = false;
+  public showLoginForm: boolean;
 
   public sound: Howl;
   public videoPlayer: HTMLVideoElement;
+
+  loginForm: FormGroup<any>;
 
   public availableVideoFiles: string[];
   public currentSoundTime: number;
@@ -95,7 +97,6 @@ export class EditorComponent implements OnInit {
   private router: Router = inject(Router);
   private sanitizer: DomSanitizer = inject(DomSanitizer);
   private auth: Auth = inject(Auth);
-  private firestore: Firestore = inject(Firestore);
   private subtitleService: SubtitleService = inject(SubtitleService);
   private user$ = user(this.auth);
 
@@ -103,8 +104,13 @@ export class EditorComponent implements OnInit {
 
     try {
 
+      // Check Login Status
+      this.showLoginForm = !this.loggedInUser;
+
+      this.setupLoginForm()
+
       // Get Logged In User
-      this.loggedInUser = await this.user$;
+      this.loggedInUser = await firstValueFrom(this.user$);
       this.documentURL = await this.app.getDocumentsDirectory();
 
       // Get subtitles from cloud
@@ -119,6 +125,7 @@ export class EditorComponent implements OnInit {
 
   loadContent(parseFileName?, index?: number) {
 
+
     this.selectedFile = parseFileName ? parseFileName : this.selectedFile;
 
     // Reset Default Values for variables
@@ -130,8 +137,10 @@ export class EditorComponent implements OnInit {
     this.videoURL = '';
 
     this.workingFile = this.cloudFiles.filter(file => file.title === parseFileName.clean)[0];
-    this.initSound();
 
+    if(this.workingFile) {
+      this.initSound();
+    }
 
   }
 
@@ -140,7 +149,7 @@ export class EditorComponent implements OnInit {
     this.showVideo = true;
     this.showSubtitle = false;
 
-    const audioURL = this.path.join(this.documentURL, '@JWVT', this.workingFile.location.split('@JWVT')[1]);
+    const audioURL = this.path.join(this.documentURL, '@JWVT', 'audio', `${this.workingFile.title}.mp3`);
 
     // Setup Sound Source
     this.sound = new Howl({
@@ -149,15 +158,11 @@ export class EditorComponent implements OnInit {
 
     // // Setup Video File
     this.videoURL = this.sanitizer.bypassSecurityTrustUrl(
-      `mose://${this.documentURL}/@JWVT/videos/${this.path.parse(this.workingFile.location).name}.mp4`
+      `mose://${this.documentURL}/@JWVT/videos/${this.workingFile.location}`
     );
-
-    this.videoPlayer = document.getElementById('videoPlayer') as HTMLVideoElement;
-    this.videoPlayer.muted = true;
 
     // Handle : SOUND PLAYING
     this.sound.on('play', () => {
-      console.log('playing...');
       this.isPlaying = this.sound.playing();
       this.showSubtitle = true; // Show Subtitle on screen
 
@@ -299,6 +304,7 @@ export class EditorComponent implements OnInit {
   }
 
   async translateAllText() {
+    if(!window.confirm('Translate all subtitles?')) {return;}
     this.updatingNumber = 1;
     this.isTranslating = true;
     for (const subtitle of this.workingFile.subtitles) {
@@ -321,39 +327,22 @@ export class EditorComponent implements OnInit {
     }
 
     this.isTranslating = false;
-    window.alert(`Translation Complete: ${this.updatingNumber}/${this.workingFile.subtitles.length}`);
+    window.alert(`Translation Complete: ${this.updatingNumber - 1}/${this.workingFile.subtitles.length}`);
   }
 
-  swapSubtitleLanguage() {
+  onChangeSubtitleLanguage() {
     this.subtitleLanguage = this.subtitleLanguage === 'en' ? 'es' : 'en';
   }
 
   async onSaveSubtitle() {
 
     try {
-      this.workingFile.title = this.selectedFile.clean;
-      const save = await this.app.saveSubtitleFile(`${this.selectedFile.clean}.json`, this.workingFile);
-
-      if (save && !this.workingFile.isCloudEnabled) {
+      if(this.loggedInUser) {
+        this.workingFile.title = this.selectedFile.clean;
+        await this.subtitleService.saveSubtitleFile(this.workingFile);
         window.alert(`Working File Saved @ ${new Date()}!`);
-      } else if(save && this.workingFile.isCloudEnabled) {
-
-        // Check to see if file exist in system
-        const fireWorkingFile = doc(this.firestore, `subtitles`, this.selectedFile.clean);
-        const document = await getDoc(fireWorkingFile);
-
-        console.log(document.data());
-
-        if(document.exists()) {
-          // @ts-ignore
-          const update = await updateDoc(doc(this.firestore, `subtitles`, this.selectedFile.clean), this.workingFile);
-        } else {
-          const saveLocation = doc(this.firestore, `subtitles`, this.selectedFile.clean);
-          const saveDoc = await setDoc(saveLocation, this.workingFile);
-        }
-
-        window.alert(`Working File Saved @ ${new Date()}!`);
-
+      } else {
+        window.alert('Oops, please login before uploading...');
       }
     } catch (err) { console.log(err); }
 
@@ -369,6 +358,7 @@ export class EditorComponent implements OnInit {
       if (confirmDeletion) {
         this.workingFile.subtitles[(id + 1)].sTime = this.workingFile.subtitles[id].sTime;
         this.workingFile.subtitles[(id + 1)].sTimeFormatted = this.workingFile.subtitles[id].sTimeFormatted;
+        // eslint-disable-next-line max-len
         this.workingFile.subtitles[(id + 1)].utterance = `${this.workingFile.subtitles[id].utterance} ${this.workingFile.subtitles[(id + 1)].utterance}`;
         this.workingFile.subtitles.splice(id, 1);
       }
@@ -382,6 +372,7 @@ export class EditorComponent implements OnInit {
       if (confirmDeletion) {
         this.workingFile.subtitles[(id - 1)].eTime = this.workingFile.subtitles[id].eTime;
         this.workingFile.subtitles[(id - 1)].eTimeFormatted = this.workingFile.subtitles[id].eTimeFormatted;
+        // eslint-disable-next-line max-len
         this.workingFile.subtitles[(id - 1)].utterance = `${this.workingFile.subtitles[(id - 1)].utterance} ${this.workingFile.subtitles[id].utterance}`;
         this.workingFile.subtitles.splice(id, 1);
       }
@@ -396,11 +387,13 @@ export class EditorComponent implements OnInit {
         if (shiftUp) {
           this.workingFile.subtitles[(id - 1)].eTime = this.workingFile.subtitles[id].eTime;
           this.workingFile.subtitles[(id - 1)].eTimeFormatted = this.workingFile.subtitles[id].eTimeFormatted;
+          // eslint-disable-next-line max-len
           this.workingFile.subtitles[(id - 1)].utterance = `${this.workingFile.subtitles[(id - 1)].utterance} ${this.workingFile.subtitles[id].utterance}`;
           this.workingFile.subtitles.splice(id, 1);
         } else {
           this.workingFile.subtitles[(id + 1)].sTime = this.workingFile.subtitles[id].sTime;
           this.workingFile.subtitles[(id + 1)].sTimeFormatted = this.workingFile.subtitles[id].sTimeFormatted;
+          // eslint-disable-next-line max-len
           this.workingFile.subtitles[(id + 1)].utterance = `${this.workingFile.subtitles[id].utterance} ${this.workingFile.subtitles[(id + 1)].utterance}`;
           this.workingFile.subtitles.splice(id, 1);
         }
@@ -464,44 +457,48 @@ export class EditorComponent implements OnInit {
 
   }
 
-  onSelectMediaToUpload() {
-    this.isUploading = true;
-    this.uploadedFile = undefined;
-    this.app.ipcRenderer.invoke('selectMediaToUpload')
-      .then(file => {
-        if(file) {
-          this.uploadedFile = file;
-          window.alert(`Working file has been created for video located at: ${file}`);
-          this.ngOnInit();
-        }
-        this.isUploading = false;
-      });
-  }
+  async onSelectMediaToUpload() {
 
-  uploadToCloud() {
-    if(this.workingFile.isCloudEnabled) {
-      const confirm = window.confirm(`Are you sure? Your document will only be available local!`);
-      if(confirm) {
-        this.workingFile.isCloudEnabled = false;
-        this.onSaveSubtitle();
+    if(this.loggedInUser) {
+      this.isUploading = true;
+      this.uploadedFile = undefined;
+      const fileData = await this.app.ipcRenderer.invoke('selectMediaToUpload');
+
+      if(fileData) {
+
+        // Uploaded File
+        this.uploadedFile = fileData.json;
+
+        // Notify User that file has been
+        window.alert(`Working file has been created for video located at: ${fileData.json.location}`);
+
+        // Subtitle file
+        await this.subtitleService.saveSubtitleFile(fileData.json);
+
+        // Run init again
+        await this.ngOnInit();
+
       }
+
+      this.isUploading = false;
+
     } else {
-      const confirm = window.confirm(`Your document will now be CloudEnabled and kept in sync with its cloud adjacent.`);
-      if(confirm) {
-        this.workingFile.isCloudEnabled = true;
-        this.onSaveSubtitle();
-      }
+      window.alert('Oops, please login before uploading...');
+      this.showLoginForm = true;
+      return;
     }
+
   }
 
   getOriginal(location) {
     return this.path.parse(location).base;
   }
 
-  onLogout() {
+  async onLogout() {
     if(window.confirm('You\'re about to logout. Are you sure?')) {
-      this.auth.signOut()
-        .then(() => this.router.navigate(['loading']));
+      await this.auth.signOut();
+      this.loggedInUser = null;
+      this.showLoginForm = true;
     }
   }
 
@@ -510,7 +507,7 @@ export class EditorComponent implements OnInit {
     this.unavailableLocal = [];
 
     const sortedAvailableFiles = this.cloudFiles.filter((file) => {
-      const numberOfVideosLocal = this.availableVideoFiles.filter((avf) => avf.split('.')[0] === file.title);
+      const numberOfVideosLocal = this.availableVideoFiles.filter((avf) => this.path.parse(avf).name === file.title);
 
       if(numberOfVideosLocal.length > 0) {
         return true;
@@ -525,18 +522,44 @@ export class EditorComponent implements OnInit {
 
   }
 
+  async onSignIn() {
+
+    try {
+      const email = this.loginForm.getRawValue().email;
+      const password = this.loginForm.getRawValue().password;
+
+      const userData = await signInWithEmailAndPassword(this.auth, email, password);
+
+      if(userData) {
+        // Set Item
+        localStorage.setItem('email', email);
+        localStorage.setItem('password', password);
+        this.loggedInUser = userData.user;
+        this.showLoginForm = false;
+      }
+    } catch (err) {
+      console.log(`Credentials don't match, please try email and password again`);
+      window.alert(`Credentials don't match, please try email and password again`);
+    }
+
+  }
+
   private async loadFolderContent() {
+
+    // Get video files
     this.availableVideoFiles = await this.app.getFolderContent('video');
 
     // Array for clean file names
     const cleanFileNames = [];
 
     for (const video of this.availableVideoFiles) {
-      const split = video.split('.');
-      const lastOfSplit = split.length - 1;
-      if (split.length > 1 && !split.includes('DS_Store')) {
-        if (!cleanFileNames.includes(video.replace(`.${split[lastOfSplit]}`, ''))) {
-          cleanFileNames.push({clean: video.replace(`.${split[lastOfSplit]}`, ''), original: video});
+      const videoFileName = this.path.parse(video).name;
+      if (videoFileName !== '.DS_Store') {
+        if (!cleanFileNames.includes(videoFileName)) {
+          cleanFileNames.push({
+            clean: videoFileName,
+            original: video
+          });
         }
       }
     }
@@ -546,5 +569,16 @@ export class EditorComponent implements OnInit {
     this.loadContent();
   }
 
+  private setupLoginForm() {
 
+    const emailValue: string = localStorage.getItem('email') ?? '';
+    const passwordValue: string = localStorage.getItem('password') ?? '';
+
+    // Setup Login Form
+    this.loginForm = new FormGroup<any>({
+      email: new FormControl(emailValue, [Validators.email, Validators.required]),
+      password: new FormControl(passwordValue, [Validators.required])
+    });
+
+  }
 }

@@ -181,9 +181,11 @@ function generateSubtitles(saveLocation, filesToCreate = "") {
         let supportedLanguages = ['en', 'es'];
         try {
             let transcribe;
+            let jsonData;
             // Log what's going on
             console.log(`Working on creating subtitles for \n - ${saveLocation}`);
-            let audioLoc = saveLocation.split(".")[0] + '.mp3';
+            let fileName = path.parse(saveLocation).name;
+            let audioLoc = fileName + '.mp3';
             let source = {
                 stream: (0, fs_1.createReadStream)(path.join(audioFolder, audioLoc)),
                 mimetype: 'audio/mp3'
@@ -202,8 +204,8 @@ function generateSubtitles(saveLocation, filesToCreate = "") {
             }
             if (!(0, fs_1.existsSync)(path.join(subtitlesFolder, 'english')))
                 (0, fs_1.mkdirSync)(path.join(subtitlesFolder, 'english'));
-            let srtSavePath = path.join(subtitlesFolder, 'english', `${saveLocation.split(".")[0]}.srt`);
-            let jsonSavePath = path.join(subtitlesFolder, `${saveLocation.split(".")[0]}.json`);
+            let srtSavePath = path.join(subtitlesFolder, 'english', `${fileName}.srt`);
+            let jsonSavePath = path.join(subtitlesFolder, `${fileName}.json`);
             // SRT Filename
             if (filesToCreate === "ALL" || filesToCreate === "SRT") {
                 const srtStream = (0, fs_1.createWriteStream)(srtSavePath, { flags: 'w' });
@@ -218,7 +220,7 @@ function generateSubtitles(saveLocation, filesToCreate = "") {
                     supportedLanguages.forEach(lang => {
                         if (!(0, fs_1.existsSync)(path.join(subtitlesFolder, lang)))
                             (0, fs_1.mkdirSync)(path.join(subtitlesFolder, lang));
-                        const langStream = (0, fs_1.createWriteStream)(path.join(subtitlesFolder, lang, `${saveLocation.split(".")[0]}-${lang}.srt`), { flags: 'w' });
+                        const langStream = (0, fs_1.createWriteStream)(path.join(subtitlesFolder, lang, `${fileName}-${lang}.srt`), { flags: 'w' });
                         langStream.write(genSrtFromJSON(JSON.parse(jsonFile), lang));
                         langStream.close();
                     });
@@ -226,16 +228,18 @@ function generateSubtitles(saveLocation, filesToCreate = "") {
             }
             // JSON Filename
             if (filesToCreate === "ALL" || filesToCreate === "JSON") {
-                const jsonStream = (0, fs_1.createWriteStream)(jsonSavePath, { flags: 'w' });
-                jsonStream.write(genSrtFromTranscribe(transcribe, { title: '', location: path.join(audioFolder, audioLoc) }).json);
-                jsonStream.close();
+                jsonData = genSrtFromTranscribe(transcribe, { title: path.parse(saveLocation).name, location: path.parse(saveLocation).base }).json;
             }
-            console.log(`All done! File located @ \n - ${srtSavePath}`);
-            return true;
+            return {
+                status: true,
+                json: JSON.parse(jsonData)
+            };
         }
         catch (err) {
-            console.log(err);
-            return false;
+            return {
+                status: false,
+                json: {}
+            };
         }
     });
 }

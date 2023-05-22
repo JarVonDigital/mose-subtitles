@@ -11,6 +11,7 @@ export class VideoPlayerComponent implements OnInit {
 
   @Input() videoURL: SafeUrl;
   @Input() activeSubtitle: SubtitleBite;
+  @Input() language: string;
 
   public subtitleLanguage: 'en' | 'es' = 'en';
 

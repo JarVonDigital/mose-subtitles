@@ -1,10 +1,8 @@
 import {Component, inject, OnInit} from '@angular/core';
 import {ElectronService} from '../../core/services';
 import {Router} from '@angular/router';
-import {Auth, getAuth, inMemoryPersistence, onAuthStateChanged, setPersistence, signInWithEmailAndPassword} from "@angular/fire/auth";
+import {Auth, getAuth, signInWithEmailAndPassword} from '@angular/fire/auth';
 import {FormControl, FormGroup, Validators} from '@angular/forms';
-import {PERSISTENCE} from "@angular/fire/compat/auth";
-import {PERSISTENCE_SETTINGS} from "@angular/fire/compat/firestore";
 
 @Component({
   selector: 'app-loading',
@@ -59,7 +57,7 @@ export class LoadingComponent implements OnInit {
       console.log(user);
       this.router.navigate(['home']);
     } else {
-      console.log(`Credentials don't match, please try email and password again`)
+      console.log(`Credentials don't match, please try email and password again`);
     };
   }
 

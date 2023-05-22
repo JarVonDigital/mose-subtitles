@@ -165,16 +165,18 @@ function genSrtFromJSON(json: Subtitle, language = 'en') {
 
 export async function generateSubtitles(saveLocation, filesToCreate = "") {
 
-  if(filesToCreate === "") {filesToCreate = "ALL"}
+  if(filesToCreate === "") { filesToCreate = "ALL" }
   let supportedLanguages = ['en', 'es'];
 
   try {
     let transcribe;
+    let jsonData;
 
     // Log what's going on
     console.log(`Working on creating subtitles for \n - ${saveLocation}`);
 
-    let audioLoc = saveLocation.split(".")[0] + '.mp3';
+    let fileName = path.parse(saveLocation).name;
+    let audioLoc = fileName + '.mp3';
 
     let source = {
       stream: createReadStream(path.join(audioFolder, audioLoc)),
@@ -198,8 +200,8 @@ export async function generateSubtitles(saveLocation, filesToCreate = "") {
     if(!existsSync(path.join(subtitlesFolder, 'english'))) mkdirSync(path.join(subtitlesFolder, 'english'));
 
 
-    let srtSavePath = path.join(subtitlesFolder, 'english', `${saveLocation.split(".")[0]}.srt`);
-    let jsonSavePath = path.join(subtitlesFolder, `${saveLocation.split(".")[0]}.json`);
+    let srtSavePath = path.join(subtitlesFolder, 'english', `${fileName}.srt`);
+    let jsonSavePath = path.join(subtitlesFolder, `${fileName}.json`);
 
     // SRT Filename
     if(filesToCreate === "ALL" || filesToCreate === "SRT") {
@@ -216,7 +218,7 @@ export async function generateSubtitles(saveLocation, filesToCreate = "") {
         // Loop through languages
         supportedLanguages.forEach(lang => {
           if(!existsSync(path.join(subtitlesFolder, lang))) mkdirSync(path.join(subtitlesFolder, lang));
-          const langStream = createWriteStream(path.join(subtitlesFolder, lang, `${saveLocation.split(".")[0]}-${lang}.srt`), { flags: 'w' });
+          const langStream = createWriteStream(path.join(subtitlesFolder, lang, `${fileName}-${lang}.srt`), { flags: 'w' });
           langStream.write(genSrtFromJSON(JSON.parse(jsonFile), lang))
           langStream.close();
         })
@@ -225,17 +227,20 @@ export async function generateSubtitles(saveLocation, filesToCreate = "") {
 
     // JSON Filename
     if(filesToCreate === "ALL" || filesToCreate === "JSON") {
-      const jsonStream = createWriteStream(jsonSavePath, { flags: 'w' });
-      jsonStream.write(genSrtFromTranscribe(transcribe, {title: '', location: path.join(audioFolder, audioLoc)}).json)
-      jsonStream.close()
+      jsonData = genSrtFromTranscribe(transcribe, {title: path.parse(saveLocation).name, location: path.parse(saveLocation).base}).json;
     }
 
-    console.log(`All done! File located @ \n - ${srtSavePath}`);
-    return true;
+    return {
+      status: true,
+      json: JSON.parse(jsonData)
+    };
 
   } catch (err) {
-    console.log(err)
-    return false;
+
+    return {
+      status: false,
+      json: {}
+    };
   }
 
 }

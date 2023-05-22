@@ -17,6 +17,8 @@ export class AudioPlayerComponent implements OnInit {
   @Output() pauseAudio: EventEmitter<boolean> = new EventEmitter<boolean>();
   @Output() muteAudio: EventEmitter<boolean> = new EventEmitter<boolean>();
   @Output() seekAudio: EventEmitter<number> = new EventEmitter<number>();
+  @Output() changeSubtitleLanguage: EventEmitter<any> = new EventEmitter();
+  @Output() generateSRT: EventEmitter<any> = new EventEmitter();
 
   public subtitleLanguage: 'en' | 'es' = 'en';
 
@@ -41,9 +43,12 @@ export class AudioPlayerComponent implements OnInit {
 
   onSeekAudio($event: any) { this.seekAudio.emit($event.target.value as number); }
 
-  // TODO: Fix Function
-  onChangeSubtitleLanguage() {}
+  onChangeSubtitleLanguage() {
+    this.subtitleLanguage = this.subtitleLanguage === 'en' ? 'es' :'en';
+    this.changeSubtitleLanguage.emit();
+  }
 
-  // TODO: Fix Function
-  regenerateSubtitle(srt: string) {}
+  onGenerateSRT(srt: 'ALL' | 'SRT' | 'JSON') {
+    this.generateSRT.emit(srt);
+  }
 }

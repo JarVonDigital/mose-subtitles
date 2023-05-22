@@ -4,6 +4,10 @@
   "description": "Angular 14 with Electron 21 (Typescript + SASS + Hot Reload)",
   "main": "app/main.js",
   "private": true,
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/JarVonDigital/mose-subtitles.git"
+  },
   "scripts": {
     "postinstall": "electron-builder install-app-deps",
     "ng": "ng",
@@ -19,6 +23,7 @@
     "electron:serve": "wait-on tcp:4200 && npm run electron:serve-tsc && electron . --serve",
     "electron:local": "npm run build:prod && electron .",
     "electron:build": "npm run build:prod && electron-builder build --win --x64 --publish=never",
+    "electron:deploy": "npm run build:prod && electron-builder build --win --x64 --publish=always",
     "electron:buildMac": "npm run build:prod && electron-builder build --publish=never",
     "test": "ng test --watch=false",
     "test:watch": "ng test",
@@ -39,6 +44,7 @@
     "@angular/platform-browser-dynamic": "14.2.6",
     "@angular/router": "14.2.6",
     "@types/howler": "2.2.7",
+    "electron-updater": "5.3.0",
     "ffmpeg-static": "5.1.0",
     "ffprobe-static": "3.1.0",
     "fluent-ffmpeg": "2.1.2",

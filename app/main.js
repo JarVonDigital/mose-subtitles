@@ -99,6 +99,7 @@ function removeSystemFilesFromArray(videoFiles) {
 }
 function doRunFileChecker() {
     return __awaiter(this, void 0, void 0, function* () {
+        let json;
         // Get Video Files On System
         let videoFiles = removeSystemFilesFromArray(fs.readdirSync(path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'videos')));
         // Get Audio Files on system
@@ -110,15 +111,17 @@ function doRunFileChecker() {
         for (let file of videoFiles) {
             let videoFileWithNoExtension = file[1];
             if (!audioFilesWithoutExtension.includes(videoFileWithNoExtension)) {
-                console.log(file);
                 // At this point we need to run our local parser to create the audio file
                 let commandToRun = `cd ${path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'SYSTEM', 'core', 'MOSE-TOOLS')} && node index.js [${file[0]}]`;
-                console.log(commandToRun);
                 (0, child_process_1.execSync)(commandToRun); // Execute Command
                 // Create JSON File
-                yield (0, mose_1.generateSubtitles)(file[0], "JSON");
+                json = yield (0, mose_1.generateSubtitles)(file[0], "JSON");
             }
         }
+        return {
+            status: true,
+            json: json.json
+        };
     });
 }
 try {
@@ -192,6 +195,7 @@ try {
     }));
     // Handle Media Upload
     electron_1.ipcMain.handle("selectMediaToUpload", (ev, arg) => __awaiter(void 0, void 0, void 0, function* () {
+        let data;
         let fileLocation = electron_1.dialog.showOpenDialogSync({
             title: "MOSE | Upload Media",
             buttonLabel: "Upload Media",
@@ -207,11 +211,17 @@ try {
         if (fileLocation) {
             let fileName = path.parse(fileLocation[0]).name + path.parse(fileLocation[0]).ext;
             (0, fs_1.copyFileSync)(fileLocation[0], path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'videos', fileName), constants_1.COPYFILE_FICLONE);
+            // Force window to remain open
             win.closable = false;
-            yield doRunFileChecker();
+            // Check for file and return subtitle
+            data = yield doRunFileChecker();
+            // Allow window to be closed
             win.closable = true;
         }
-        return fileLocation;
+        return {
+            fileLocation: fileLocation,
+            json: data.json
+        };
     }));
 }
 catch (e) {

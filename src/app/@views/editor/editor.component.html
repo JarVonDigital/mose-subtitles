@@ -1,8 +1,33 @@
 
 <div class="selector">
+
+  <div class="login-form" *ngIf="showLoginForm" [formGroup]="loginForm">
+    <div class="form-field">
+      <div class="icon">
+        <img width="96" height="96" src="https://img.icons8.com/material/96/new-post--v1.png" alt="new-post--v1"/>
+      </div>
+      <div class="input">
+        <input type="email" placeholder="email@domain.com" formControlName="email">
+      </div>
+    </div>
+    <div class="form-field">
+      <div class="icon">
+        <img width="96" height="96" src="https://img.icons8.com/material/96/lock-2--v1.png" alt="lock-2--v1"/>
+      </div>
+      <div class="input">
+        <input type="password" placeholder="pass****" formControlName="password">
+      </div>
+    </div>
+
+    <div class="form-field">
+      <button (click)="onSignIn()">Sign In</button>
+    </div>
+  </div>
+
   <div class="data" *ngIf="availableVideoFiles">
 
     <div [@listAnimation]="checkLocalAvailability(cloudFiles).length">
+
       <!-- Available Files -->
       <li *ngFor="let file of checkLocalAvailability(cloudFiles); let i = index" (click)="loadContent({clean: file.title, original: getOriginal(file.location)}, i)">
         <div class="icon">
@@ -10,9 +35,11 @@
         </div>
         <div class="info">{{file.title}}</div>
       </li>
+
     </div>
 
     <div @listFadeInAnimation>
+
       <!-- Unavailable Files -->
       <li *ngFor="let file of checkLocalAvailability(cloudFiles, true); let i = index" class="unavailable">
         <div class="icon">
@@ -20,6 +47,7 @@
         </div>
         <div class="info">{{file.title}}</div>
       </li>
+
     </div>
 
 
@@ -40,7 +68,7 @@
 
   <div class="content-header">
     <div class="menuBtn">
-      <img (click)="onLogout()" src="https://img.icons8.com/material/ffffff/null/exit.png"/>
+      <img *ngIf="loggedInUser" (click)="onLogout()" src="https://img.icons8.com/material/ffffff/null/exit.png"/>
       <img src="https://img.icons8.com/material-outlined/48/ffffff/laptop-play-video.png"/>
     </div>
 
@@ -49,15 +77,6 @@
     </div>
 
     <div class="buttons">
-
-      <div class="btn" *ngIf="loggedInUser" (click)="uploadToCloud()">
-        <img *ngIf="!this.workingFile?.isCloudEnabled" src="https://img.icons8.com/material/96/ffffff/upload-2--v1.png"/>
-        <img *ngIf="this.workingFile?.isCloudEnabled" src="https://img.icons8.com/material/96/ffffff/cloud-checked.png"/>
-      </div>
-
-      <div class="btn" (click)="regenerateSubtitle('JSON')">
-        <img src="https://img.icons8.com/material-rounded/96/ffffff/new-by-copy.png"/>
-      </div>
 
       <div class="btn" (click)="onSaveSubtitle()">
         <img src="https://img.icons8.com/material-rounded/96/ffffff/save-all.png"/>
@@ -69,89 +88,102 @@
     </div>
   </div>
 
-  <!-- Video Player -->
-  <app-video-player [videoURL]="videoURL" [activeSubtitle]="activeSubtitle"></app-video-player>
-  <app-audio-player
-    [audioControl]="sound"
-    [currentAudioTime]="currentSoundTime"
-    [activeSubtitleFile]="workingFile"
-    (playAudio)="play()"
-    (pauseAudio)="pause()"
-    (muteAudio)="muteAudio($event)"
-    (seekAudio)="playFrom($event)"
-  ></app-audio-player>
+  <ng-container *ngIf="workingFile">
+    <!-- Video Player -->
+    <app-video-player [videoURL]="videoURL" [activeSubtitle]="activeSubtitle" [language]="subtitleLanguage"></app-video-player>
+    <app-audio-player
+      [audioControl]="sound"
+      [currentAudioTime]="currentSoundTime"
+      [activeSubtitleFile]="workingFile"
+      (playAudio)="play()"
+      (pauseAudio)="pause()"
+      (muteAudio)="muteAudio($event)"
+      (seekAudio)="playFrom($event)"
+      (changeSubtitleLanguage)="onChangeSubtitleLanguage()"
+      (generateSRT)="regenerateSubtitle($event)"
+    ></app-audio-player>
+  </ng-container>
+
 
 </div>
 
 <div class="editor">
   <div class="json-editor" *ngIf="workingFile">
     <div class="btn-header">
-      <button class="btn" (click)="translateAllText()">Translate All: [Spanish]</button>
-      <button class="btn" (click)="onToggleTranslation()">Hide Translation: [{{isTranslationHidden}}]</button>
+      <div class="btn" (click)="translateAllText()">
+        <img width="96" height="96" src="https://img.icons8.com/material/96/google-translate.png" alt="google-translate"/>
+        <h4>Translate</h4>
+      </div>
+      <div class="btn" (click)="onToggleTranslation()">
+        <img width="96" height="96" src="https://img.icons8.com/material/96/hide--v1.png" alt="hide--v1"/>
+        <h4>{{isTranslationHidden ? 'Hidden' : 'Visible'}}</h4>
+      </div>
     </div>
 
-    <ng-container *ngFor="let subtitle of workingFile.subtitles; index as id">
-      <div [id]="'sub-' + id" class="subtitle" [ngClass]="subtitle.isActive ? 'active' : 'not-active'"> <!-- [ngClass]="thisSubtitleActive(subtitle, id)" -->
-        <div class="header">
+    <div class="subtitle-container" [@listAnimation]="workingFile.subtitles.length">
+      <ng-container *ngFor="let subtitle of workingFile.subtitles; index as id">
+        <div [id]="'sub-' + id" class="subtitle" [ngClass]="subtitle.isActive ? 'active' : 'not-active'"> <!-- [ngClass]="thisSubtitleActive(subtitle, id)" -->
+          <div class="header">
 
-          <!--
-          Play/Pause Button for Subtitle Bite
-          -->
-          <button *ngIf="!subtitle.isActive || !isPlaying" (click)="playFrom(subtitle.sTime)">
-            <img src="https://img.icons8.com/material/96/null/play--v1.png"/>
-          </button>
-          <button *ngIf="subtitle.isActive && isPlaying" (click)="pause()">
-            <img src="https://img.icons8.com/material/96/678f67/pause--v1.png"/>
-          </button>
+            <!--
+            Play/Pause Button for Subtitle Bite
+            -->
+            <button *ngIf="!subtitle.isActive || !isPlaying" (click)="playFrom(subtitle.sTime)">
+              <img src="https://img.icons8.com/material/96/null/play--v1.png"/>
+            </button>
+            <button *ngIf="subtitle.isActive && isPlaying" (click)="pause()">
+              <img src="https://img.icons8.com/material/96/678f67/pause--v1.png"/>
+            </button>
 
-          <!-- SYNC Position -->
-          <h3><small>SYNC</small>: {{subtitle.sTime | audioToVideo}}</h3>
+            <!-- SYNC Position -->
+            <h3><small>SYNC</small>: {{subtitle.sTime | audioToVideo}}</h3>
 
-          <!--
-          Translate Button
-            - Will translate into all available languages
-           -->
-          <button (click)="translateText(subtitle)">
-            <img src="https://img.icons8.com/material/96/null/google-translate.png"/>
-          </button>
-        </div>
-
-        <!-- English | Default -->
-        <div class="utterance">
-          <div class="info">
-            <label>English | Default</label>
+            <!--
+            Translate Button
+              - Will translate into all available languages
+             -->
+            <button (click)="translateText(subtitle)">
+              <img src="https://img.icons8.com/material/96/null/google-translate.png"/>
+            </button>
           </div>
-          <div class="container">
-            <textarea [(ngModel)]="subtitle.utterance">{{subtitle.utterance}}</textarea>
+
+          <!-- English | Default -->
+          <div class="utterance">
+            <div class="info">
+              <label>English | Default</label>
+            </div>
+            <div class="container">
+              <textarea [(ngModel)]="subtitle.utterance">{{subtitle.utterance}}</textarea>
+            </div>
           </div>
-        </div>
 
-        <!-- Spanish -->
-        <div class="utterance" *ngIf="subtitle.languages.es && !isTranslationHidden">
-          <label>Spanish</label>
-          <div class="container">
-            <textarea [(ngModel)]="subtitle.languages.es">{{subtitle.languages.es}}</textarea>
-            <img src="https://img.icons8.com/material-rounded/48/fff/update-left-rotation.png"/>
+          <!-- Spanish -->
+          <div class="utterance" *ngIf="subtitle.languages.es && !isTranslationHidden">
+            <label>Spanish</label>
+            <div class="container">
+              <textarea [(ngModel)]="subtitle.languages.es">{{subtitle.languages.es}}</textarea>
+              <img src="https://img.icons8.com/material-rounded/48/fff/update-left-rotation.png"/>
+            </div>
           </div>
-        </div>
 
-        <!-- Buttons -->
-        <div class="buttons">
-          <button *ngIf="id === 0 || id === (workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, false, subtitle)">
-            <img src="https://img.icons8.com/material-rounded/96/ab684c/delete-forever.png"/>
-          </button>
-          <button *ngIf="id > 0 && (id < workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, true, subtitle)">
-            <img src="https://img.icons8.com/material/96/ab684c/left-up2--v1.png"/>
-          </button>
-          <button (click)="onSplitSubtitle(id)">
-            <img src="https://img.icons8.com/material/96/ab684c/split-horizontal--v1.png"/>
-          </button>
-          <button *ngIf="id > 0 && (id < workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, false, subtitle)">
-            <img src="https://img.icons8.com/material/96/ab684c/down2--v2.png"/>
-          </button>
-        </div>
+          <!-- Buttons -->
+          <div class="buttons">
+            <button *ngIf="id === 0 || id === (workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, false, subtitle)">
+              <img src="https://img.icons8.com/material-rounded/96/ab684c/delete-forever.png"/>
+            </button>
+            <button *ngIf="id > 0 && (id < workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, true, subtitle)">
+              <img src="https://img.icons8.com/material/96/ab684c/left-up2--v1.png"/>
+            </button>
+            <button (click)="onSplitSubtitle(id)">
+              <img src="https://img.icons8.com/material/96/ab684c/split-horizontal--v1.png"/>
+            </button>
+            <button *ngIf="id > 0 && (id < workingFile.subtitles.length - 1)" (click)="onDeleteSubtitle(id, false, subtitle)">
+              <img src="https://img.icons8.com/material/96/ab684c/down2--v2.png"/>
+            </button>
+          </div>
 
-      </div>
-    </ng-container>
+        </div>
+      </ng-container>
+    </div>
   </div>
 </div>

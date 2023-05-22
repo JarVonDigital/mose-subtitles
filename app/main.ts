@@ -1,4 +1,5 @@
 import {app, BrowserWindow, screen, ipcMain, protocol, dialog} from 'electron';
+import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -17,13 +18,9 @@ import {getDocumentsFolder} from "platform-folders";
 import {copyFileSync, FSWatcher} from "fs";
 import {COPYFILE_FICLONE} from "constants";
 
-let translateServer: ChildProcess;
-
 let win: BrowserWindow = null;
 const args = process.argv.slice(1),
   serve = args.some(val => val === '--serve');
-
-let systemFileWatcher: FSWatcher;
 
 function createWindow(): BrowserWindow {
 
@@ -92,6 +89,8 @@ function removeSystemFilesFromArray(videoFiles: string[]) {
 
 async function doRunFileChecker() {
 
+  let json;
+
   // Get Video Files On System
   let videoFiles = removeSystemFilesFromArray(
     fs.readdirSync(
@@ -114,18 +113,25 @@ async function doRunFileChecker() {
   for(let file of videoFiles) {
     let videoFileWithNoExtension = file[1];
     if(!audioFilesWithoutExtension.includes(videoFileWithNoExtension)) {
-      console.log(file);
+
       // At this point we need to run our local parser to create the audio file
       let commandToRun = `cd ${path.join(getDocumentsFolder(), '@JWVT', 'SYSTEM', 'core', 'MOSE-TOOLS')} && node index.js [${file[0]}]`;
-      console.log(commandToRun);
+
       execSync(commandToRun); // Execute Command
+
       // Create JSON File
-      await generateSubtitles(file[0], "JSON")
+      json = await generateSubtitles(file[0], "JSON")
     }
+  }
+
+  return {
+    status: true,
+    json: json.json
   }
 }
 
 try {
+
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
@@ -138,7 +144,8 @@ try {
     })
 
     // Create Window
-    createWindow()
+    createWindow();
+    autoUpdater.checkForUpdatesAndNotify();
 
   });
 
@@ -168,7 +175,6 @@ try {
   ipcMain.handle("convertSubtitles", async (ev, arg) => await convertSubtitles(arg[0], arg[1]))
   ipcMain.handle("saveSubtitleFile", async (ev, fileName: string, subtitle: Subtitle) => writeJsonSubtitleFile(subtitle, fileName))
   ipcMain.handle("getDocumentsDirectory", async (ev, arg) => getDocumentsFolder())
-
   ipcMain.handle('initAVServices', async (ev) => {
     let data = await new Promise((res, rej) => {
 
@@ -206,9 +212,11 @@ try {
 
     return data;
   })
-
   // Handle Media Upload
   ipcMain.handle("selectMediaToUpload", async (ev, arg) => {
+
+    let data;
+
     let fileLocation = dialog.showOpenDialogSync({
       title: "MOSE | Upload Media",
       buttonLabel: "Upload Media",
@@ -225,13 +233,25 @@ try {
     if(fileLocation) {
       let fileName = path.parse(fileLocation[0]).name + path.parse(fileLocation[0]).ext;
       copyFileSync(fileLocation[0], path.join(getDocumentsFolder(), '@JWVT', 'videos', fileName), COPYFILE_FICLONE)
+
+      // Force window to remain open
       win.closable = false;
-      await doRunFileChecker();
+
+      // Check for file and return subtitle
+      data = await doRunFileChecker();
+
+      // Allow window to be closed
       win.closable = true;
     }
 
-    return fileLocation;
+    return {
+      fileLocation: fileLocation,
+      json: data.json
+    };
   })
+
+  // Handle
+  ipcMain.on('restart_app', () => { autoUpdater.quitAndInstall(); });
 
 } catch (e) {
   // Catch Error
