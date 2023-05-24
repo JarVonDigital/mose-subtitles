@@ -5,12 +5,9 @@ import {Subtitle} from '../../@interfaces/subtitle';
 import {SubtitleBite} from '../../@interfaces/subtitle-bite';
 import {HttpClient} from '@angular/common/http';
 import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
-import {Auth, signInWithEmailAndPassword, User, user} from '@angular/fire/auth';
-import {firstValueFrom, Observable} from 'rxjs';
-import {Router} from '@angular/router';
 import {SubtitleService} from '../../@services/subtitle/subtitle.service';
-import {animate, stagger, style, transition, trigger, query as animationQuery} from "@angular/animations";
-import {FormControl, FormGroup, Validators} from "@angular/forms";
+import {animate, stagger, style, transition, trigger, query as animationQuery} from '@angular/animations';
+import {AuthService} from '../../@services/auth/auth.service';
 
 interface FileContainer {
   original: string;
@@ -68,12 +65,9 @@ export class EditorComponent implements OnInit {
   isTranslating = false;
   isTranslationHidden = false;
   isUploading = false;
-  public showLoginForm: boolean;
 
   public sound: Howl;
   public videoPlayer: HTMLVideoElement;
-
-  loginForm: FormGroup<any>;
 
   public availableVideoFiles: string[];
   public currentSoundTime: number;
@@ -86,31 +80,21 @@ export class EditorComponent implements OnInit {
   public unavailableLocal: Subtitle[];
 
   uploadedFile: undefined;
-  loggedInUser: Observable<User | null> | User;
 
   // NodeJS
-  private path = window.require('path');
+  protected path = window.require('path');
+
+  protected authService: AuthService = inject(AuthService);
 
   // Injectors
   private app: ElectronService = inject(ElectronService);
   private http: HttpClient = inject(HttpClient);
-  private router: Router = inject(Router);
   private sanitizer: DomSanitizer = inject(DomSanitizer);
-  private auth: Auth = inject(Auth);
   private subtitleService: SubtitleService = inject(SubtitleService);
-  private user$ = user(this.auth);
 
   async ngOnInit(): Promise<void> {
 
     try {
-
-      // Check Login Status
-      this.showLoginForm = !this.loggedInUser;
-
-      this.setupLoginForm()
-
-      // Get Logged In User
-      this.loggedInUser = await firstValueFrom(this.user$);
       this.documentURL = await this.app.getDocumentsDirectory();
 
       // Get subtitles from cloud
@@ -337,7 +321,7 @@ export class EditorComponent implements OnInit {
   async onSaveSubtitle() {
 
     try {
-      if(this.loggedInUser) {
+      if(this.authService.validateUser().isLoggedIn) {
         this.workingFile.title = this.selectedFile.clean;
         await this.subtitleService.saveSubtitleFile(this.workingFile);
         window.alert(`Working File Saved @ ${new Date()}!`);
@@ -459,7 +443,7 @@ export class EditorComponent implements OnInit {
 
   async onSelectMediaToUpload() {
 
-    if(this.loggedInUser) {
+    if(this.authService.validateUser().isLoggedIn) {
       this.isUploading = true;
       this.uploadedFile = undefined;
       const fileData = await this.app.ipcRenderer.invoke('selectMediaToUpload');
@@ -484,7 +468,6 @@ export class EditorComponent implements OnInit {
 
     } else {
       window.alert('Oops, please login before uploading...');
-      this.showLoginForm = true;
       return;
     }
 
@@ -492,14 +475,6 @@ export class EditorComponent implements OnInit {
 
   getOriginal(location) {
     return this.path.parse(location).base;
-  }
-
-  async onLogout() {
-    if(window.confirm('You\'re about to logout. Are you sure?')) {
-      await this.auth.signOut();
-      this.loggedInUser = null;
-      this.showLoginForm = true;
-    }
   }
 
   checkLocalAvailability(cloudFiles: Subtitle[], returnUnavailable = false): Subtitle[] {
@@ -519,28 +494,6 @@ export class EditorComponent implements OnInit {
     });
 
     return returnUnavailable ? this.unavailableLocal : sortedAvailableFiles;
-
-  }
-
-  async onSignIn() {
-
-    try {
-      const email = this.loginForm.getRawValue().email;
-      const password = this.loginForm.getRawValue().password;
-
-      const userData = await signInWithEmailAndPassword(this.auth, email, password);
-
-      if(userData) {
-        // Set Item
-        localStorage.setItem('email', email);
-        localStorage.setItem('password', password);
-        this.loggedInUser = userData.user;
-        this.showLoginForm = false;
-      }
-    } catch (err) {
-      console.log(`Credentials don't match, please try email and password again`);
-      window.alert(`Credentials don't match, please try email and password again`);
-    }
 
   }
 
@@ -567,18 +520,5 @@ export class EditorComponent implements OnInit {
     this.files = cleanFileNames;
     this.selectedFile = cleanFileNames[0];
     this.loadContent();
-  }
-
-  private setupLoginForm() {
-
-    const emailValue: string = localStorage.getItem('email') ?? '';
-    const passwordValue: string = localStorage.getItem('password') ?? '';
-
-    // Setup Login Form
-    this.loginForm = new FormGroup<any>({
-      email: new FormControl(emailValue, [Validators.email, Validators.required]),
-      password: new FormControl(passwordValue, [Validators.required])
-    });
-
   }
 }

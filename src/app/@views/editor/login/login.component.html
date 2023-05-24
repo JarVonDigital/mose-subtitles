@@ -1,0 +1,39 @@
+<div class="login-form" [formGroup]="loginForm">
+  <ng-container *ngIf="!authService.validateUser().isLoggedIn">
+    <div class="form-field">
+      <div class="icon">
+        <img width="96" height="96" src="https://img.icons8.com/material/96/new-post--v1.png" alt="new-post--v1"/>
+      </div>
+      <div class="input">
+        <input type="email" placeholder="email@domain.com" formControlName="email">
+      </div>
+    </div>
+    <div class="form-field">
+      <div class="icon">
+        <img width="96" height="96" src="https://img.icons8.com/material/96/lock-2--v1.png" alt="lock-2--v1"/>
+      </div>
+      <div class="input">
+        <input type="password" placeholder="pass****" formControlName="password">
+      </div>
+    </div>
+    <div class="form-field">
+      <button (click)="onSignIn()">Sign In</button>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="authService.validateUser().isLoggedIn">
+    <div class="user-info">
+      <div class="icon">
+        <img width="96" height="96" src="https://img.icons8.com/material/96/ab684c/user-male-circle--v1.png" alt="user-male-circle--v1"/>
+      </div>
+      <div class="info">
+        <li>{{authService.getUserInfo().firstName}} {{authService.getUserInfo().lastName}}</li>
+        <li>{{authService.getUserInfo().email}}</li>
+      </div>
+    </div>
+
+    <button class="logout-btn" (click)="onLogout()">Sign Out</button>
+
+  </ng-container>
+
+</div>

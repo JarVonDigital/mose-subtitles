@@ -33,6 +33,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
+const electron_updater_1 = require("electron-updater");
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const mose_1 = require("./mose");
@@ -41,10 +42,8 @@ const url = __importStar(require("url"));
 const platform_folders_1 = require("platform-folders");
 const fs_1 = require("fs");
 const constants_1 = require("constants");
-let translateServer;
 let win = null;
 const args = process.argv.slice(1), serve = args.some(val => val === '--serve');
-let systemFileWatcher;
 function createWindow() {
     const size = electron_1.screen.getPrimaryDisplay().workAreaSize;
     // Create the browser window.
@@ -136,6 +135,7 @@ try {
         });
         // Create Window
         createWindow();
+        electron_updater_1.autoUpdater.checkForUpdatesAndNotify();
     });
     // Quit when all windows are closed.
     electron_1.app.on('window-all-closed', () => {
@@ -223,6 +223,8 @@ try {
             json: data.json
         };
     }));
+    // Handle
+    electron_1.ipcMain.on('restart_app', () => { electron_updater_1.autoUpdater.quitAndInstall(); });
 }
 catch (e) {
     // Catch Error

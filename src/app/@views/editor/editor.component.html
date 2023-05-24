@@ -1,28 +1,8 @@
 
 <div class="selector">
 
-  <div class="login-form" *ngIf="showLoginForm" [formGroup]="loginForm">
-    <div class="form-field">
-      <div class="icon">
-        <img width="96" height="96" src="https://img.icons8.com/material/96/new-post--v1.png" alt="new-post--v1"/>
-      </div>
-      <div class="input">
-        <input type="email" placeholder="email@domain.com" formControlName="email">
-      </div>
-    </div>
-    <div class="form-field">
-      <div class="icon">
-        <img width="96" height="96" src="https://img.icons8.com/material/96/lock-2--v1.png" alt="lock-2--v1"/>
-      </div>
-      <div class="input">
-        <input type="password" placeholder="pass****" formControlName="password">
-      </div>
-    </div>
-
-    <div class="form-field">
-      <button (click)="onSignIn()">Sign In</button>
-    </div>
-  </div>
+  <!-- Login Component -->
+  <app-login></app-login>
 
   <div class="data" *ngIf="availableVideoFiles">
 
@@ -68,7 +48,6 @@
 
   <div class="content-header">
     <div class="menuBtn">
-      <img *ngIf="loggedInUser" (click)="onLogout()" src="https://img.icons8.com/material/ffffff/null/exit.png"/>
       <img src="https://img.icons8.com/material-outlined/48/ffffff/laptop-play-video.png"/>
     </div>
 

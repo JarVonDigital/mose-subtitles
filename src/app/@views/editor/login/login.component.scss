@@ -1,0 +1,107 @@
+$MainOrange: #ab684c;
+$SecondaryOrange: rgba(171, 104, 76, 0.70);
+
+:host {
+  .login-form {
+    margin: 10px;
+    padding: 10px;
+    background-color: white;
+
+    .form-field {
+      display: flex;
+      background-color: white;
+      border-radius: 30px;
+      border: 1px solid rgb(240, 240 ,240);
+      overflow: hidden;
+      margin-bottom: 10px;
+
+      .icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 30px;
+        width: 30px;
+        border-radius: 30px;
+        background-color: rgb(250, 250, 250);
+
+        img {
+          height: 15px;
+          width: 15px;
+        }
+      }
+
+      .input {
+        display: flex;
+        flex: 1;
+
+        input {
+          flex: 1;
+          border-radius: 0;
+          border: none;
+          outline: none;
+          font-family: inherit;
+        }
+      }
+
+      button {
+        flex: 1;
+        background-color: $MainOrange;
+        color: white;
+        outline: none;
+        border: none;
+        cursor: pointer;
+        height: 30px;
+
+        &:hover {
+          opacity: .5;
+        }
+      }
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 50px;
+      width: 100%;
+
+      .icon {
+        height: 30px;
+        width: 30px;
+        margin: 0 8px;
+
+        img {
+          height: 100%;
+          width: 100%;
+        }
+      }
+
+      .info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+
+        li {
+          list-style: none;
+          font-size: 13px;
+        }
+      }
+    }
+
+    .logout-btn {
+      width: 100%;
+      border: 2px solid $MainOrange;
+      background-color: transparent;
+      color: rgb(70, 70, 70);
+      font-family: inherit;
+      border-radius: 2.5px;
+      margin: 5px 0;
+      padding: 2.5px;
+
+      &:hover {
+        opacity: .5;
+        cursor: pointer;
+      }
+    }
+  }
+}

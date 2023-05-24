@@ -21,12 +21,13 @@ import {VideoPlayerComponent} from './@views/editor/video-player/video-player.co
 import {AudioPlayerComponent} from './@views/editor/audio-player/audio-player.component';
 import {AudioToVideoPipe} from './@pipes/time/audio-to-video/audio-to-video.pipe';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
+import { LoginComponent } from './@views/editor/login/login.component';
 
 // AoT requires an exported function for factories
 const httpLoaderFactory = (http: HttpClient): TranslateHttpLoader => new TranslateHttpLoader(http, './assets/i18n/', '.json');
 
 @NgModule({
-  declarations: [AppComponent, EditorComponent, LoadingComponent, VideoPlayerComponent, AudioPlayerComponent, AudioToVideoPipe],
+  declarations: [AppComponent, EditorComponent, LoadingComponent, VideoPlayerComponent, AudioPlayerComponent, AudioToVideoPipe, LoginComponent],
   imports: [
     BrowserModule,
     BrowserAnimationsModule,

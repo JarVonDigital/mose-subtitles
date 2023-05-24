@@ -4,16 +4,15 @@ import {
   doc,
   Firestore,
   getDoc,
-  getDocs,
   getDocsFromServer,
   query,
   setDoc,
   updateDoc
 } from '@angular/fire/firestore';
 import {Subtitle} from '../../@interfaces/subtitle';
-import {Auth, User, user} from "@angular/fire/auth";
-import {firstValueFrom} from "rxjs";
-import {DocumentData} from "@angular/fire/compat/firestore";
+import {Auth, User, user} from '@angular/fire/auth';
+import {firstValueFrom} from 'rxjs';
+import {DocumentData} from '@angular/fire/compat/firestore';
 
 @Injectable({
   providedIn: 'root'
