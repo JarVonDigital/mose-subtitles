@@ -1,6 +1,7 @@
 import {Component, inject, OnInit} from '@angular/core';
 import {AuthService} from '../../../@services/auth/auth.service';
 import {FormControl, FormGroup, Validators} from '@angular/forms';
+import {ElectronService} from "../../../core/services";
 
 @Component({
   selector: 'app-login',
@@ -12,6 +13,7 @@ export class LoginComponent implements OnInit {
   // Login Form
   protected loginForm: FormGroup<any>;
 
+  protected app: ElectronService = inject(ElectronService);
   protected authService: AuthService = inject(AuthService);
 
   ngOnInit(): void {
@@ -25,7 +27,6 @@ export class LoginComponent implements OnInit {
       await this.authService.signIn(email, password);
     } catch (err) {
       console.log(`Credentials don't match, please try email and password again`);
-      window.alert(`Credentials don't match, please try email and password again`);
     }
   }
 

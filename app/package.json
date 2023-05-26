@@ -1,7 +1,7 @@
 {
   "name": "mose-subtitles",
   "description": "Angular Electron sample",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "main": "main.js",
   "private": true,
   "dependencies": {

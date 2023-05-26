@@ -2,6 +2,7 @@ import {inject, Injectable} from '@angular/core';
 import {Auth, user, User, Persistence, signInWithEmailAndPassword} from '@angular/fire/auth';
 import {doc, Firestore, getDoc} from "@angular/fire/firestore";
 import {UserInfo} from "../../@interfaces/user/user-info";
+import {ElectronService} from "../../core/services";
 
 @Injectable({
   providedIn: 'root'
@@ -12,6 +13,7 @@ export class AuthService {
 
   private persistence: Persistence = 'LOCAL' as unknown as Persistence;
 
+  private app: ElectronService = inject(ElectronService);
   private firestore: Firestore = inject(Firestore);
   private auth: Auth = inject(Auth);
   private user = user(this.auth);
@@ -47,7 +49,11 @@ export class AuthService {
 
     } catch (err) {
       console.log('Unable to sign in, please try again.');
-      window.alert('Unable to sign in, please try again.');
+      await this.app.showMessageBox({
+        title: 'Sign In Error',
+        message: `Credentials don't match, please try email and password again`,
+        type: 'warning'
+      });
       return false;
     }
   }
