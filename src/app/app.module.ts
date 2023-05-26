@@ -12,7 +12,6 @@ import {TranslateHttpLoader} from '@ngx-translate/http-loader';
 
 import {AppComponent} from './app.component';
 import {EditorComponent} from './@views/editor/editor.component';
-import {LoadingComponent} from './@views/loading/loading.component';
 import {initializeApp, provideFirebaseApp} from '@angular/fire/app';
 import {environment} from '../environments/environment';
 import {provideAuth, getAuth} from '@angular/fire/auth';
@@ -27,7 +26,7 @@ import { LoginComponent } from './@views/editor/login/login.component';
 const httpLoaderFactory = (http: HttpClient): TranslateHttpLoader => new TranslateHttpLoader(http, './assets/i18n/', '.json');
 
 @NgModule({
-  declarations: [AppComponent, EditorComponent, LoadingComponent, VideoPlayerComponent, AudioPlayerComponent, AudioToVideoPipe, LoginComponent],
+  declarations: [AppComponent, EditorComponent, VideoPlayerComponent, AudioPlayerComponent, AudioToVideoPipe, LoginComponent],
   imports: [
     BrowserModule,
     BrowserAnimationsModule,

@@ -1,5 +1,5 @@
 <div class="login-form" [formGroup]="loginForm">
-  <ng-container *ngIf="!authService.validateUser().isLoggedIn">
+  <ng-container *ngIf="!authService.validateUser().isLoggedIn || !authService.validateUser().activeUser">
     <div class="form-field">
       <div class="icon">
         <img width="96" height="96" src="https://img.icons8.com/material/96/new-post--v1.png" alt="new-post--v1"/>

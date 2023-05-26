@@ -33,7 +33,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
-const electron_updater_1 = require("electron-updater");
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const mose_1 = require("./mose");
@@ -111,7 +110,7 @@ function doRunFileChecker() {
             let videoFileWithNoExtension = file[1];
             if (!audioFilesWithoutExtension.includes(videoFileWithNoExtension)) {
                 // At this point we need to run our local parser to create the audio file
-                let commandToRun = `cd ${path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'SYSTEM', 'core', 'MOSE-TOOLS')} && node index.js [${file[0]}]`;
+                let commandToRun = `cd ${path.join((0, platform_folders_1.getDocumentsFolder)(), '@JWVT', 'SYSTEM', 'core', 'MOSE-TOOLS')} && npm ci --legacy-peer-deps && node index.js [${file[0]}]`;
                 (0, child_process_1.execSync)(commandToRun); // Execute Command
                 // Create JSON File
                 json = yield (0, mose_1.generateSubtitles)(file[0], "JSON");
@@ -135,7 +134,6 @@ try {
         });
         // Create Window
         createWindow();
-        electron_updater_1.autoUpdater.checkForUpdatesAndNotify();
     });
     // Quit when all windows are closed.
     electron_1.app.on('window-all-closed', () => {
@@ -223,8 +221,13 @@ try {
             json: data.json
         };
     }));
-    // Handle
-    electron_1.ipcMain.on('restart_app', () => { electron_updater_1.autoUpdater.quitAndInstall(); });
+    // Overrride built in browser functiosn
+    electron_1.ipcMain.handle('showMessageBox', (ev, options) => __awaiter(void 0, void 0, void 0, function* () {
+        return electron_1.dialog.showMessageBox(win, options);
+    }));
+    electron_1.ipcMain.handle('showErrorBox', (ev, title, content) => __awaiter(void 0, void 0, void 0, function* () {
+        return electron_1.dialog.showErrorBox(title, content);
+    }));
 }
 catch (e) {
     // Catch Error

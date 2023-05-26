@@ -8,6 +8,7 @@ import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 import {SubtitleService} from '../../@services/subtitle/subtitle.service';
 import {animate, stagger, style, transition, trigger, query as animationQuery} from '@angular/animations';
 import {AuthService} from '../../@services/auth/auth.service';
+import {Errors} from '../../@enums/errors/errors';
 
 interface FileContainer {
   original: string;
@@ -19,10 +20,6 @@ const listAnimation = trigger('listAnimation', [
     animationQuery(':enter',
       [style({ opacity: 0 }), stagger('60ms', animate('600ms ease-out', style({ opacity: 1 })))],
       { optional: true }
-    ),
-    animationQuery(':leave',
-      animate('200ms', style({ opacity: 0 })),
-      { optional: true }
     )
   ])
 ]);
@@ -30,11 +27,7 @@ const listAnimation = trigger('listAnimation', [
 const listFadeInAnimation = trigger('listFadeInAnimation', [
   transition('* <=> *', [
     animationQuery(':enter',
-      [style({ opacity: 0 }), stagger('60ms', animate('600ms ease-out', style({ opacity: .5 })))],
-      { optional: true }
-    ),
-    animationQuery(':leave',
-      animate('200ms', style({ opacity: 0 })),
+      [style({ opacity: 0 }), stagger('2s', animate('600ms ease-out', style({ opacity: .5 })))],
       { optional: true }
     )
   ])
@@ -97,18 +90,13 @@ export class EditorComponent implements OnInit {
     try {
       this.documentURL = await this.app.getDocumentsDirectory();
 
-      // Get subtitles from cloud
-      this.cloudFiles = await this.subtitleService.getSubtitleFiles();
-
-      // Load folder content once complete
-      await this.loadFolderContent();
+      await this.onRefreshWorkingFile();
 
     } catch (err) { console.log(err); }
 
   }
 
   loadContent(parseFileName?, index?: number) {
-
 
     this.selectedFile = parseFileName ? parseFileName : this.selectedFile;
 
@@ -120,7 +108,7 @@ export class EditorComponent implements OnInit {
 
     this.videoURL = '';
 
-    this.workingFile = this.cloudFiles.filter(file => file.title === parseFileName.clean)[0];
+    this.workingFile = this.cloudFiles.filter(file => file.title === this.selectedFile.clean)[0];
 
     if(this.workingFile) {
       this.initSound();
@@ -321,60 +309,45 @@ export class EditorComponent implements OnInit {
   async onSaveSubtitle() {
 
     try {
-      if(this.authService.validateUser().isLoggedIn) {
-        this.workingFile.title = this.selectedFile.clean;
-        await this.subtitleService.saveSubtitleFile(this.workingFile);
-        window.alert(`Working File Saved @ ${new Date()}!`);
+      if(this.authService.validateUser().isLoggedIn && this.authService.validateUser().activeUser) {
+        if((this.authService.validateUser().activeUser.email === this.workingFile.assignedTo) || this.workingFile.assignedTo === '') {
+          this.workingFile.title = this.selectedFile.clean;
+          await this.subtitleService.saveSubtitleFile(this.workingFile);
+          await this.app.showMessageBox({title: 'Save Confirmation', message: `Working File Saved @ ${new Date()}!`});
+        } else  {
+          await this.app.showMessageBox({
+            title: 'Not Authorized',
+            message: `You do not have authority to edit this file.\nPlease contact your team lead to be assigned.\n\nYou are free to make changes however they won't be saved.`,
+            type: 'warning'
+          });
+        }
       } else {
-        window.alert('Oops, please login before uploading...');
+        await this.app.showErrorBox('Authentication Error', Errors.authentication);
       }
     } catch (err) { console.log(err); }
 
   }
 
-  onDeleteSubtitle(id: number, shiftUp = false, subtitle?: SubtitleBite) {
+  async onDeleteSubtitle(id: number, shiftUp = false, subtitle?: SubtitleBite) {
 
-    const confirmDeletion = window.confirm(`Are you sure you want to delete subtitle: ${subtitle.utterance}`);
+    try {
 
-    // First Subtitle In Array
-    if (id === 0) {
-
-      if (confirmDeletion) {
-        this.workingFile.subtitles[(id + 1)].sTime = this.workingFile.subtitles[id].sTime;
-        this.workingFile.subtitles[(id + 1)].sTimeFormatted = this.workingFile.subtitles[id].sTimeFormatted;
-        // eslint-disable-next-line max-len
-        this.workingFile.subtitles[(id + 1)].utterance = `${this.workingFile.subtitles[id].utterance} ${this.workingFile.subtitles[(id + 1)].utterance}`;
-        this.workingFile.subtitles.splice(id, 1);
+      if(!this.authService.validateUser().isLoggedIn && !this.authService.validateUser().activeUser) {
+        throw new Error(Errors.authentication);
       }
 
-    }
+      const confirmDeletion = await this.app.showMessageBox({
+        title: `Delete Subtitle`,
+        message: 'Are you sure you want to delete this subtitle?',
+        type: 'warning',
+        detail: subtitle.utterance,
+        buttons: ['Keep Subtitle', 'Delete Subtitle']
+      });
 
-    // Last Subtitle In Array
-    else if (id === (this.workingFile.subtitles.length - 1)) {
+      // First Subtitle In Array
+      if (id === 0) {
 
-      // Last Subtitle In Array
-      if (confirmDeletion) {
-        this.workingFile.subtitles[(id - 1)].eTime = this.workingFile.subtitles[id].eTime;
-        this.workingFile.subtitles[(id - 1)].eTimeFormatted = this.workingFile.subtitles[id].eTimeFormatted;
-        // eslint-disable-next-line max-len
-        this.workingFile.subtitles[(id - 1)].utterance = `${this.workingFile.subtitles[(id - 1)].utterance} ${this.workingFile.subtitles[id].utterance}`;
-        this.workingFile.subtitles.splice(id, 1);
-      }
-
-    }
-
-    // Every other subtitle in array
-    else {
-
-      if (confirmDeletion) {
-
-        if (shiftUp) {
-          this.workingFile.subtitles[(id - 1)].eTime = this.workingFile.subtitles[id].eTime;
-          this.workingFile.subtitles[(id - 1)].eTimeFormatted = this.workingFile.subtitles[id].eTimeFormatted;
-          // eslint-disable-next-line max-len
-          this.workingFile.subtitles[(id - 1)].utterance = `${this.workingFile.subtitles[(id - 1)].utterance} ${this.workingFile.subtitles[id].utterance}`;
-          this.workingFile.subtitles.splice(id, 1);
-        } else {
+        if (confirmDeletion.response) {
           this.workingFile.subtitles[(id + 1)].sTime = this.workingFile.subtitles[id].sTime;
           this.workingFile.subtitles[(id + 1)].sTimeFormatted = this.workingFile.subtitles[id].sTimeFormatted;
           // eslint-disable-next-line max-len
@@ -384,6 +357,45 @@ export class EditorComponent implements OnInit {
 
       }
 
+      // Last Subtitle In Array
+      else if (id === (this.workingFile.subtitles.length - 1)) {
+
+        // Last Subtitle In Array
+        if (confirmDeletion.response) {
+          this.workingFile.subtitles[(id - 1)].eTime = this.workingFile.subtitles[id].eTime;
+          this.workingFile.subtitles[(id - 1)].eTimeFormatted = this.workingFile.subtitles[id].eTimeFormatted;
+          // eslint-disable-next-line max-len
+          this.workingFile.subtitles[(id - 1)].utterance = `${this.workingFile.subtitles[(id - 1)].utterance} ${this.workingFile.subtitles[id].utterance}`;
+          this.workingFile.subtitles.splice(id, 1);
+        }
+
+      }
+
+      // Every other subtitle in array
+      else {
+
+        if (confirmDeletion.response) {
+
+          if (shiftUp) {
+            this.workingFile.subtitles[(id - 1)].eTime = this.workingFile.subtitles[id].eTime;
+            this.workingFile.subtitles[(id - 1)].eTimeFormatted = this.workingFile.subtitles[id].eTimeFormatted;
+            // eslint-disable-next-line max-len
+            this.workingFile.subtitles[(id - 1)].utterance = `${this.workingFile.subtitles[(id - 1)].utterance} ${this.workingFile.subtitles[id].utterance}`;
+            this.workingFile.subtitles.splice(id, 1);
+          } else {
+            this.workingFile.subtitles[(id + 1)].sTime = this.workingFile.subtitles[id].sTime;
+            this.workingFile.subtitles[(id + 1)].sTimeFormatted = this.workingFile.subtitles[id].sTimeFormatted;
+            // eslint-disable-next-line max-len
+            this.workingFile.subtitles[(id + 1)].utterance = `${this.workingFile.subtitles[id].utterance} ${this.workingFile.subtitles[(id + 1)].utterance}`;
+            this.workingFile.subtitles.splice(id, 1);
+          }
+
+        }
+
+      }
+
+    } catch (err) {
+      this.app.showErrorBox('Authentication Error', err.message);
     }
 
   }
@@ -391,59 +403,73 @@ export class EditorComponent implements OnInit {
     this.isTranslationHidden = !this.isTranslationHidden;
   }
 
-  onSplitSubtitle(id: number) {
-    const curSub = this.workingFile.subtitles[id];
-    const nexSub = this.workingFile.subtitles[id + 1];
+  async onSplitSubtitle(id: number) {
 
-    const endSubtitle = curSub.eTime;
-    const endSubtitleFormatted = curSub.eTimeFormatted;
-
-    // new end time of current subtitle
-    const splitTime =  curSub.eTime - ((curSub.eTime - curSub.sTime) / 2);
-    const splitTimeFormatted = new Date(splitTime * 1000)
-      .toISOString()
-      .substr(11, 12)
-      .replace('.', ',');
-
-    const splitText = curSub.utterance.split(' ');
-    const amountToSplit = Math.round(splitText.length / 2);
-    let counter = 0;
-    const newUtteranceArray = [];
-
-    while(counter < splitText.length) {
-      if(counter >= amountToSplit) {
-        newUtteranceArray.push(splitText[counter]);
+    try {
+      if(!this.authService.validateUser().isLoggedIn && !this.authService.validateUser().activeUser) {
+        throw new Error(Errors.authentication);
       }
-      counter++;
+      const curSub = this.workingFile.subtitles[id];
+      const nexSub = this.workingFile.subtitles[id + 1];
+
+      const endSubtitle = curSub.eTime;
+      const endSubtitleFormatted = curSub.eTimeFormatted;
+
+      // new end time of current subtitle
+      const splitTime =  curSub.eTime - ((curSub.eTime - curSub.sTime) / 2);
+      const splitTimeFormatted = new Date(splitTime * 1000)
+        .toISOString()
+        .substr(11, 12)
+        .replace('.', ',');
+
+      const splitText = curSub.utterance.split(' ');
+      const amountToSplit = Math.round(splitText.length / 2);
+      let counter = 0;
+      const newUtteranceArray = [];
+
+      while(counter < splitText.length) {
+        if(counter >= amountToSplit) {
+          newUtteranceArray.push(splitText[counter]);
+        }
+        counter++;
+      }
+
+      const newUtterance = newUtteranceArray.join(' ');
+
+      // Cleanup Original Subtitle
+      curSub.eTime = splitTime;
+      curSub.eTimeFormatted = splitTimeFormatted;
+      curSub.utterance = curSub.utterance.split(newUtterance)[0];
+      curSub.languages = {};
+
+      // Create New Subtitle and insert
+      this.workingFile.subtitles
+        .splice(id + 1, 0, {
+          id: (curSub.id + 0.1),
+          sTime: splitTime,
+          eTime: endSubtitle,
+          sTimeFormatted: splitTimeFormatted,
+          eTimeFormatted: endSubtitleFormatted,
+          languages: {},
+          utterance: newUtterance
+        });
+
+      await this.onSaveSubtitle();
+
+    } catch (err) {
+      this.app.showErrorBox('Authentication Error', err.message);
     }
-
-    const newUtterance = newUtteranceArray.join(' ');
-
-    // Cleanup Original Subtitle
-    curSub.eTime = splitTime;
-    curSub.eTimeFormatted = splitTimeFormatted;
-    curSub.utterance = curSub.utterance.split(newUtterance)[0];
-    curSub.languages = {};
-
-    // Create New Subtitle and insert
-    this.workingFile.subtitles
-      .splice(id + 1, 0, {
-        id: (curSub.id + 0.1),
-        sTime: splitTime,
-        eTime: endSubtitle,
-        sTimeFormatted: splitTimeFormatted,
-        eTimeFormatted: endSubtitleFormatted,
-        languages: {},
-        utterance: newUtterance
-      });
-
-    this.onSaveSubtitle();
 
   }
 
   async onSelectMediaToUpload() {
 
-    if(this.authService.validateUser().isLoggedIn) {
+    try {
+
+      if(!this.authService.validateUser().isLoggedIn && !this.authService.validateUser().activeUser) {
+        throw new Error(Errors.authentication);
+      }
+
       this.isUploading = true;
       this.uploadedFile = undefined;
       const fileData = await this.app.ipcRenderer.invoke('selectMediaToUpload');
@@ -453,11 +479,14 @@ export class EditorComponent implements OnInit {
         // Uploaded File
         this.uploadedFile = fileData.json;
 
-        // Notify User that file has been
-        window.alert(`Working file has been created for video located at: ${fileData.json.location}`);
-
         // Subtitle file
-        await this.subtitleService.saveSubtitleFile(fileData.json);
+        await this.subtitleService.saveSubtitleFile(fileData.json, true);
+
+        // Upload Complete Message
+        await this.app.showMessageBox({
+          title: 'Upload Complete',
+          message: `Media has been uploaded succesfuly: ${fileData.json.location}`
+        });
 
         // Run init again
         await this.ngOnInit();
@@ -466,9 +495,8 @@ export class EditorComponent implements OnInit {
 
       this.isUploading = false;
 
-    } else {
-      window.alert('Oops, please login before uploading...');
-      return;
+    } catch(err) {
+      await this.app.showErrorBox('Authentication Error', err.message);
     }
 
   }
@@ -494,6 +522,28 @@ export class EditorComponent implements OnInit {
     });
 
     return returnUnavailable ? this.unavailableLocal : sortedAvailableFiles;
+
+  }
+
+  async onRefreshWorkingFile() {
+
+    try {
+
+      if(this.workingFile) {
+        if(!this.authService.validateUser().isLoggedIn && !this.authService.validateUser().activeUser) {
+          throw new Error(Errors.authentication);
+        }
+        this.onSaveSubtitle();
+      }
+
+      // Get subtitles from cloud
+      this.cloudFiles = await this.subtitleService.getSubtitleFiles();
+
+      // Load folder content once complete
+      await this.loadFolderContent();
+    } catch (err) {
+      this.app.showErrorBox('General Error', Errors.general);
+    }
 
   }
 

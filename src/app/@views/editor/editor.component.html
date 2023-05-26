@@ -97,6 +97,10 @@
         <img width="96" height="96" src="https://img.icons8.com/material/96/hide--v1.png" alt="hide--v1"/>
         <h4>{{isTranslationHidden ? 'Hidden' : 'Visible'}}</h4>
       </div>
+      <div class="btn" (click)="onRefreshWorkingFile()">
+        <img width="24" height="24" src="https://img.icons8.com/material/24/update-left-rotation.png" alt="update-left-rotation"/>
+        <h4>Refresh</h4>
+      </div>
     </div>
 
     <div class="subtitle-container" [@listAnimation]="workingFile.subtitles.length">

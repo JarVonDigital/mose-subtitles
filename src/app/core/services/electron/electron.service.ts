@@ -2,8 +2,7 @@ import { Injectable } from '@angular/core';
 
 // If you import a module but never use any of the imported values other than as TypeScript types,
 // the resulting javascript file will look as if you never imported the module at all.
-import { ipcRenderer, webFrame } from 'electron';
-import * as childProcess from 'child_process';
+import { ipcRenderer, webFrame, dialog, MessageBoxOptions, MessageBoxReturnValue} from 'electron';
 import * as fs from 'fs';
 import {Subtitle} from '../../../@interfaces/subtitle';
 
@@ -13,15 +12,15 @@ import {Subtitle} from '../../../@interfaces/subtitle';
 export class ElectronService {
   ipcRenderer: typeof ipcRenderer;
   webFrame: typeof webFrame;
-  childProcess: typeof childProcess;
   fs: typeof fs;
+  dialog: typeof dialog;
 
   constructor() {
     // Conditional imports
     if (this.isElectron) {
       this.ipcRenderer = window.require('electron').ipcRenderer;
       this.webFrame = window.require('electron').webFrame;
-
+      this.dialog = window.require('electron').dialog;
       this.fs = window.require('fs');
 
       // Notes :
@@ -64,5 +63,13 @@ export class ElectronService {
 
   public getDocumentsDirectory() {
     return this.ipcRenderer.invoke('getDocumentsDirectory');
+  }
+
+  async showMessageBox(options: MessageBoxOptions): Promise<MessageBoxReturnValue> {
+    return await this.ipcRenderer.invoke('showMessageBox', options);
+  }
+
+  async showErrorBox(title: string, content: string) {
+    return await this.ipcRenderer.invoke('showErrorBox', title, content);
   }
 }

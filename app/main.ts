@@ -1,5 +1,4 @@
-import {app, BrowserWindow, screen, ipcMain, protocol, dialog} from 'electron';
-import { autoUpdater } from 'electron-updater';
+import {app, BrowserWindow, screen, ipcMain, protocol, dialog, MessageBoxOptions} from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -11,11 +10,11 @@ import {
   writeJsonSubtitleFile
 } from "./mose";
 
-import {ChildProcess, execSync, spawn} from "child_process";
+import { execSync} from "child_process";
 import * as url from "url";
 import {Subtitle} from "../src/app/@interfaces/subtitle";
 import {getDocumentsFolder} from "platform-folders";
-import {copyFileSync, FSWatcher} from "fs";
+import {copyFileSync} from "fs";
 import {COPYFILE_FICLONE} from "constants";
 
 let win: BrowserWindow = null;
@@ -115,7 +114,7 @@ async function doRunFileChecker() {
     if(!audioFilesWithoutExtension.includes(videoFileWithNoExtension)) {
 
       // At this point we need to run our local parser to create the audio file
-      let commandToRun = `cd ${path.join(getDocumentsFolder(), '@JWVT', 'SYSTEM', 'core', 'MOSE-TOOLS')} && node index.js [${file[0]}]`;
+      let commandToRun = `cd ${path.join(getDocumentsFolder(), '@JWVT', 'SYSTEM', 'core', 'MOSE-TOOLS')} && npm ci --legacy-peer-deps && node index.js [${file[0]}]`;
 
       execSync(commandToRun); // Execute Command
 
@@ -145,7 +144,6 @@ try {
 
     // Create Window
     createWindow();
-    autoUpdater.checkForUpdatesAndNotify();
 
   });
 
@@ -250,8 +248,14 @@ try {
     };
   })
 
-  // Handle
-  ipcMain.on('restart_app', () => { autoUpdater.quitAndInstall(); });
+  // Overrride built in browser functiosn
+  ipcMain.handle('showMessageBox', async (ev, options: MessageBoxOptions) => {
+    return dialog.showMessageBox(win, options);
+  })
+
+  ipcMain.handle('showErrorBox', async (ev, title: string, content: string) => {
+    return dialog.showErrorBox(title, content);
+  })
 
 } catch (e) {
   // Catch Error

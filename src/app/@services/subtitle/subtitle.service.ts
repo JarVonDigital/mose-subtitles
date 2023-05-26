@@ -13,12 +13,17 @@ import {Subtitle} from '../../@interfaces/subtitle';
 import {Auth, User, user} from '@angular/fire/auth';
 import {firstValueFrom} from 'rxjs';
 import {DocumentData} from '@angular/fire/compat/firestore';
+import {AuthService} from "../auth/auth.service";
+import {Errors} from "../../@enums/errors/errors";
+import {ElectronService} from "../../core/services";
 
 @Injectable({
   providedIn: 'root'
 })
 export class SubtitleService {
 
+  private app: ElectronService = inject(ElectronService);
+  private authService: AuthService = inject(AuthService);
   private firestore: Firestore = inject(Firestore);
   private auth: Auth = inject(Auth);
   private user$ = user(this.auth);
@@ -37,30 +42,39 @@ export class SubtitleService {
 
   }
 
-  async saveSubtitleFile(subtitle: Subtitle) {
+  async saveSubtitleFile(subtitle: Subtitle, doCheck = false) {
 
     try {
 
       const loggedInUser: User = await firstValueFrom(this.user$);
-
-      if(!loggedInUser) {
-        window.alert('Oops, please login before uploading...');
-        return;
-      }
+      if(!this.authService.validateUser().isLoggedIn) {throw new Error(Errors.authentication);}
 
       if(!subtitle.assignedTo) {
         subtitle.assignedTo = loggedInUser.email;
         subtitle.isLocked = true;
       }
 
-      console.log(subtitle);
-
       // Check to see if file exist in system
       const fireWorkingFile = doc(this.firestore, `subtitles`, subtitle.title);
       const document = await getDoc(fireWorkingFile);
 
       if(document.exists()) {
-        await updateDoc(doc(this.firestore, `subtitles`, subtitle.title), (subtitle as DocumentData));
+        if(doCheck) {
+
+          const overrideCloudData = await this.app.showMessageBox({
+            title: 'Data Import',
+            message: 'Import video only?',
+            type: 'question',
+            buttons: ['Import Video Only', 'Import Video and Override Subtitle']
+          });
+
+          if(!overrideCloudData.response) {
+            await updateDoc(doc(this.firestore, `subtitles`, subtitle.title), (subtitle as DocumentData));
+          }
+
+        } else {
+          await updateDoc(doc(this.firestore, `subtitles`, subtitle.title), (subtitle as DocumentData));
+        }
       } else {
         const saveLocation = doc(this.firestore, `subtitles`, subtitle.title);
         await setDoc(saveLocation, (subtitle as DocumentData));

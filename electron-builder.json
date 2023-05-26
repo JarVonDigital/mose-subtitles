@@ -17,7 +17,7 @@
   "win": {
     "icon": "dist/assets/icons",
     "target": [
-      "zip"
+      "nsis"
     ]
   },
   "portable": {},
