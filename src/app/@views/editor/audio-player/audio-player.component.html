@@ -11,7 +11,7 @@
 
   <div class="slider-header" *ngIf="activeSubtitleFile">
     <h3>{{activeSubtitleFile.title}}</h3>
-    <h4>{{(currentAudioTime || 0) | audioToVideo}}</h4>
+    <h4>{{(currentAudioTime || 0) | audioToVideo}} / {{audioControl.duration() | audioToVideo}}</h4>
   </div>
 
   <input type="range" [value]="currentAudioTime" min="0" [max]="audioControl?.duration(0)" (input)="onSeekAudio($event)">
