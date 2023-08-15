@@ -2,7 +2,6 @@ const process = require("process");
 const path = require("path");
 const os = require('os');
 const fs = require("fs");
-const folders = require("platform-folders")
 
 //require the ffmpeg package so we can use ffmpeg using JS
 const ffmpeg = require('fluent-ffmpeg');
@@ -18,7 +17,8 @@ ffmpeg.setFfprobePath(ffprobePath);
 //
 // Save a reference to the local folder holding JWVT
 // if this Folder doesn't exist it needs to be generated and MOSE needs to be restarted.
-const mainDirectory = path.join(folders.getDocumentsFolder(), '@JWVT');
+const homeDir = fs.existsSync(path.join(os.homedir(), 'OneDrive')) ? path.join(os.homedir(), 'OneDrive') : os.homedir();
+const mainDirectory = path.join(homeDir, 'documents', '@JWVT');
 
 /**
  *

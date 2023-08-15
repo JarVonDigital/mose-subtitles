@@ -27,7 +27,7 @@ const listAnimation = trigger('listAnimation', [
 const listFadeInAnimation = trigger('listFadeInAnimation', [
   transition('* <=> *', [
     animationQuery(':enter',
-      [style({ opacity: 0 }), stagger('2s', animate('600ms ease-out', style({ opacity: .5 })))],
+      [style({ opacity: 0 }), stagger('20ms', animate('600ms ease-out', style({ opacity: .5 })))],
       { optional: true }
     )
   ])
@@ -74,6 +74,11 @@ export class EditorComponent implements OnInit {
 
   uploadedFile: undefined;
 
+  // Rule Enforcer
+  ruleAction = 'replace';
+  replace = '';
+  replaceWith = '';
+
   // NodeJS
   protected path = window.require('path');
 
@@ -86,6 +91,14 @@ export class EditorComponent implements OnInit {
   private subtitleService: SubtitleService = inject(SubtitleService);
 
   async ngOnInit(): Promise<void> {
+
+    window.addEventListener('keypress', (ev) => {
+      if(ev.code === 'Space' && ev.ctrlKey) {
+        ev.preventDefault();
+        this.clearSelection();
+        this.play(); // Play - Pause
+      }
+    });
 
     try {
       this.documentURL = await this.app.getDocumentsDirectory();
@@ -114,6 +127,10 @@ export class EditorComponent implements OnInit {
       this.initSound();
     }
 
+  }
+
+  clearSelection() {
+    if (window.getSelection) {window.getSelection().removeAllRanges();}
   }
 
   initSound() {
@@ -191,8 +208,7 @@ export class EditorComponent implements OnInit {
 
   play() {
     if (this.sound.playing()) {
-      this.videoPlayer.pause();
-      this.sound.pause();
+      this.pause();
     } else {
       const videoPlayer = document.getElementById('videoPlayer') as HTMLVideoElement;
       videoPlayer.play();
@@ -543,6 +559,22 @@ export class EditorComponent implements OnInit {
       await this.loadFolderContent();
     } catch (err) {
       this.app.showErrorBox('General Error', Errors.general);
+    }
+
+  }
+
+  onActiveRule() {
+    const onReplace = () => {
+      const reg = new RegExp(`${this.replace}`, 'gi');
+      this.workingFile.subtitles.map(sub => {
+        sub.utterance = sub.utterance.replace(reg, this.replaceWith);
+        return sub;
+      });
+    };
+
+    switch (this.ruleAction) {
+      case 'replace':
+        onReplace();
     }
 
   }

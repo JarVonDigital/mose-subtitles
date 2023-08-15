@@ -81,6 +81,18 @@
       (changeSubtitleLanguage)="onChangeSubtitleLanguage()"
       (generateSRT)="regenerateSubtitle($event)"
     ></app-audio-player>
+
+    <div class="rule-enforcer">
+
+      <select [(ngModel)]="ruleAction">
+        <option value="replace">Replace</option>
+      </select>
+
+      <input type="text" [(ngModel)]="replace">
+      <input type="text" [(ngModel)]="replaceWith">
+
+      <button (click)="onActiveRule()">Run Rule</button>
+    </div>
   </ng-container>
 
 
